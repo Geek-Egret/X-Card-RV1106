@@ -1,0 +1,63 @@
+<html>
+<body>
+<pre>
+<h1>µVision Build Log</h1>
+<h2>Tool Versions:</h2>
+IDE-Version: ¦ÌVision V5.25.3.0
+Copyright (C) 2018 ARM Ltd and ARM Germany GmbH. All rights reserved.
+License Information: 1 1, 1, LIC=LSNXV-PHI28-45ST5-GDWSP-ZBPK3-ZKEMY
+ 
+Tool Versions:
+Toolchain:       MDK-ARM Plus  Version: 5.38.0.0
+Toolchain Path:  D:\KEIL\ARM\ARMCC\Bin
+C Compiler:      Armcc.exe V5.05 update 1 (build 106)
+Assembler:       Armasm.exe V5.05 update 1 (build 106)
+Linker/Locator:  ArmLink.exe V5.05 update 1 (build 106)
+Library Manager: ArmAr.exe V5.05 update 1 (build 106)
+Hex Converter:   FromElf.exe V5.05 update 1 (build 106)
+CPU DLL:         SARMCM3.DLL V5.38.0.0
+Dialog DLL:      DARMCM1.DLL V1.19.6.0
+Target DLL:      STLink\ST-LINKIII-KEIL_SWO.dll V3.1.0.0
+Dialog DLL:      TARMCM1.DLL V1.14.6.0
+ 
+<h2>Project:</h2>
+E:\FILE_GEEK_EGRET\PROJECTS\GE-CARD_COMPUTER-RV1106-202601\4.FIRMWARE\RV1106_SLAVE_MCU\RV1106_SLAVE_MCU\MDK-ARM\RV1106_SLAVE_MCU.uvprojx
+Project File Date:  02/12/2026
+
+<h2>Output:</h2>
+*** Using Compiler 'V5.05 update 1 (build 106)', folder: 'D:\KEIL\ARM\ARMCC\Bin'
+Build target 'RV1106_SLAVE_MCU'
+compiling main.c...
+../Core/Src/main.c(181): warning:  #188-D: enumerated type mixed with another type
+  		HAL_GPIO_WritePin(DEBUG_EN_GPIO_Port, DEBUG_EN_Pin, DEBUG_EN);
+../Core/Src/main.c: 1 warning, 0 errors
+linking...
+Program Size: Code=5580 RO-data=288 RW-data=60 ZI-data=1708  
+FromELF: creating hex file...
+"RV1106_SLAVE_MCU\RV1106_SLAVE_MCU.axf" - 0 Error(s), 1 Warning(s).
+
+<h2>Software Packages used:</h2>
+
+Package Vendor: ARM
+                http://www.keil.com/pack/ARM.CMSIS.5.9.0.pack
+                ARM.CMSIS.5.9.0
+                CMSIS (Common Microcontroller Software Interface Standard)
+   * Component: CORE Version: 5.6.0
+
+Package Vendor: Keil
+                https://www.keil.com/pack/Keil.STM32G0xx_DFP.2.1.0.pack
+                Keil.STM32G0xx_DFP.2.1.0
+                STMicroelectronics STM32G0 Series Device Support
+
+<h2>Collection of Component include folders:</h2>
+  .\RTE\_RV1106_SLAVE_MCU
+  D:\KEIL\ARM\PACK\ARM\CMSIS\5.9.0\CMSIS\Core\Include
+
+<h2>Collection of Component Files used:</h2>
+
+   * Component: ARM::CMSIS:CORE:5.6.0
+      Include file:  CMSIS\Core\Include\tz_context.h
+Build Time Elapsed:  00:00:01
+</pre>
+</body>
+</html>

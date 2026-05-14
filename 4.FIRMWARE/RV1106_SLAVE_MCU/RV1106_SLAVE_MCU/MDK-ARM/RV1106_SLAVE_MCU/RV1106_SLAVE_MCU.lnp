@@ -1,0 +1,28 @@
+--cpu Cortex-M0+
+"rv1106_slave_mcu\startup_stm32g031xx.o"
+"rv1106_slave_mcu\user.o"
+"rv1106_slave_mcu\main.o"
+"rv1106_slave_mcu\gpio.o"
+"rv1106_slave_mcu\tim.o"
+"rv1106_slave_mcu\stm32g0xx_it.o"
+"rv1106_slave_mcu\stm32g0xx_hal_msp.o"
+"rv1106_slave_mcu\stm32g0xx_hal_tim.o"
+"rv1106_slave_mcu\stm32g0xx_hal_tim_ex.o"
+"rv1106_slave_mcu\stm32g0xx_hal_rcc.o"
+"rv1106_slave_mcu\stm32g0xx_hal_rcc_ex.o"
+"rv1106_slave_mcu\stm32g0xx_ll_rcc.o"
+"rv1106_slave_mcu\stm32g0xx_hal_flash.o"
+"rv1106_slave_mcu\stm32g0xx_hal_flash_ex.o"
+"rv1106_slave_mcu\stm32g0xx_hal_gpio.o"
+"rv1106_slave_mcu\stm32g0xx_hal_dma.o"
+"rv1106_slave_mcu\stm32g0xx_hal_dma_ex.o"
+"rv1106_slave_mcu\stm32g0xx_hal_pwr.o"
+"rv1106_slave_mcu\stm32g0xx_hal_pwr_ex.o"
+"rv1106_slave_mcu\stm32g0xx_hal_cortex.o"
+"rv1106_slave_mcu\stm32g0xx_hal.o"
+"rv1106_slave_mcu\stm32g0xx_hal_exti.o"
+"rv1106_slave_mcu\system_stm32g0xx.o"
+--strict --scatter "RV1106_SLAVE_MCU\RV1106_SLAVE_MCU.sct"
+--summary_stderr --info summarysizes --map --load_addr_map_info --xref --callgraph --symbols
+--info sizes --info totals --info unused --info veneers
+--list "RV1106_SLAVE_MCU.map" -o RV1106_SLAVE_MCU\RV1106_SLAVE_MCU.axf
