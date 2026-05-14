@@ -1,0 +1,54 @@
+#!/bin/sh
+
+WPA_CONF=/etc/wpa_supplicant.conf
+WPA_CTRL=/var/run/wpa_supplicant
+IFACE=wlan0
+
+start() {
+    echo "Starting wlan0..."
+
+    mkdir -p ${WPA_CTRL}
+    chmod 755 ${WPA_CTRL}
+
+    ifconfig ${IFACE} up
+
+    wpa_supplicant -B -i ${IFACE} -C ${WPA_CTRL} -c ${WPA_CONF}
+
+    for i in 1 2 3 4 5 6 7 8 9 10; do
+        if wpa_cli -p ${WPA_CTRL} status 2>/dev/null | grep -q 'wpa_state=COMPLETED'; then
+            echo "wlan0 connected"
+            break
+        fi
+        sleep 1
+    done
+
+    udhcpc -b -i ${IFACE}
+
+    echo "wlan0 start done"
+}
+
+stop() {
+    echo "Stopping wlan0..."
+    killall udhcpc 2>/dev/null
+    killall wpa_supplicant 2>/dev/null
+    ifconfig ${IFACE} down
+    echo "wlan0 stopped"
+}
+
+case "$1" in
+    start)
+        start
+        ;;
+    stop)
+        stop
+        ;;
+    restart)
+        stop
+        sleep 1
+        start
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|restart}"
+        exit 1
+        ;;
+esac

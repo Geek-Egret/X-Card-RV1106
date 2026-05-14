@@ -1,0 +1,263 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright (c) 2022 Rockchip Electronics Co., Ltd.
+ */
+
+/dts-v1/;
+#include "rv1106.dtsi"
+// #include "rv1106-luckfox-pico-ultra-ipc.dtsi"
+#include <dt-bindings/input/input.h>
+#include <dt-bindings/display/media-bus-format.h>
+
+/ {
+	model = "Geek Egret RV1106G";
+	compatible = "rockchip,rv1106g3";
+
+	// 超级重要
+	chosen {
+		bootargs = "earlycon=uart8250,mmio32,0xff4c0000 console=ttyFIQ0 root=/dev/mmcblk0p7 rootwait snd_soc_core.prealloc_buffer_size_kbytes=16 coherent_pool=0";
+	};
+
+	restart-poweroff {
+		compatible = "restart-poweroff";
+	};
+
+	// 超级重要，不使用的话无法进入loader模式
+	adc-keys {
+		compatible = "adc-keys";
+		io-channels = <&saradc 0>;
+		io-channel-names = "buttons";
+		poll-interval = <100>;
+		keyup-threshold-microvolt = <1800000>;
+
+		key_volumeup-key {
+			label = "key_volumeup";
+			linux,code = <KEY_VOLUMEUP>;
+			press-threshold-microvolt = <0>;
+		};
+
+		key_volumedown-key {
+			label = "key_volumedown";
+			linux,code = <KEY_VOLUMEDOWN>;
+			press-threshold-microvolt = <400781>;
+		};
+	};
+
+	reserved_memory: reserved-memory {
+		status = "okay";
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+		drm_logo: drm-logo@00000000 {
+			compatible = "rockchip,drm-logo";
+			reg = <0x0 0x0>;
+		};
+		linux,cma {
+			status = "okay";
+			compatible = "shared-dma-pool";
+			inactive;
+			reusable;
+			size = <0xA00000>; //10M
+			linux,cma-default;
+		};
+		mmc_ecsd: mmc@3f000 {
+			reg = <0x3f000 0x00001000>;
+		};
+	};
+
+	vcc_1v8: vcc-1v8 {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc_1v8";
+		regulator-always-on;
+		regulator-boot-on;
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+	};
+
+	vcc_3v3: vcc-3v3 {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc_3v3";
+		regulator-always-on;
+		regulator-boot-on;
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+	};
+
+	vdd_arm: vdd-arm {
+		compatible = "regulator-fixed";
+		regulator-name = "vdd_arm";
+		regulator-min-microvolt = <800000>;
+		regulator-max-microvolt = <1000000>;
+		regulator-init-microvolt = <900000>;
+		regulator-always-on;
+		regulator-boot-on;
+	};
+
+	rockchip_amp: rockchip-amp {
+		compatible = "rockchip,amp";
+		clocks = <&cru CLK_TIMER_ROOT>, <&cru PCLK_TIMER>, <&cru CLK_TIMER5>,
+			<&cru CLK_CORE_MCU>, <&cru CLK_CORE_MCU_RTC>, <&cru PCLK_MAILBOX>;
+
+		status = "okay";
+	};
+
+	sdio_pwrseq: sdio-pwrseq {
+		compatible = "mmc-pwrseq-simple";
+		pinctrl-names = "default";
+		reset-gpios = <&gpio1 RK_PA2 GPIO_ACTIVE_LOW>;
+	};
+
+	// wireless_bluetooth: wireless-bluetooth {
+	// 	compatible = "bluetooth-platdata";
+	// 	uart_rts_gpios = <&gpio0 RK_PA5 GPIO_ACTIVE_LOW>;
+	// 	pinctrl-names = "default", "rts_gpio";
+	// 	pinctrl-0 = <&uart1m0_rtsn>;
+	// 	pinctrl-1 = <&uart1_gpios>;
+	// 	BT,wake_gpio     = <&gpio0 RK_PA2 GPIO_ACTIVE_HIGH>;
+	// 	BT,wake_host_irq = <&gpio1 RK_PA2 GPIO_ACTIVE_HIGH>;
+	// 	status = "okay";
+	// };
+};
+
+/**********CRU**********/
+//&cru {
+//	assigned-clocks =
+//		<&cru PLL_GPLL>, <&cru PLL_CPLL>,
+//		<&cru ARMCLK>,
+//		<&cru ACLK_PERI_ROOT>, <&cru HCLK_PERI_ROOT>,
+//		<&cru PCLK_PERI_ROOT>, <&cru ACLK_BUS_ROOT>,
+//		<&cru PCLK_TOP_ROOT>, <&cru PCLK_PMU_ROOT>,
+//		<&cru HCLK_PMU_ROOT>, <&cru CLK_500M_SRC>;
+//	assigned-clock-rates =
+//		<1188000000>, <700000000>,
+//		<1104000000>,
+//		<400000000>, <200000000>,
+//		<100000000>, <300000000>,
+//		<100000000>, <100000000>,
+//		<200000000>, <700000000>;
+//};
+
+/**********NPU**********/
+// &npu {
+// 	assigned-clock-rates = <700000000>;
+// };
+
+/**********ADC**********/
+&saradc {
+	status = "okay";
+	vref-supply = <&vcc_1v8>;
+};
+
+&tsadc {
+	status = "okay";
+};
+
+/**********EMMC**********/
+&emmc {
+	bus-width = <8>;
+	cap-mmc-highspeed;
+	non-removable;
+	mmc-hs200-1_8v;
+	rockchip,default-sample-phase = <90>;
+	no-sdio;
+	no-sd;
+	memory-region-ecsd = <&mmc_ecsd>;
+	post-power-on-delay-ms = <0>;
+	status = "okay";
+};
+
+&fiq_debugger {
+	rockchip,irq-mode-enable = <1>;
+	status = "okay";
+};
+
+/**********SDIO-WIFI**********/
+&sdmmc {
+	max-frequency = <50000000>;
+	bus-width = <4>;
+	cap-sd-highspeed;
+	cap-sdio-irq;
+	keep-power-in-suspend;
+	non-removable;
+	rockchip,default-sample-phase = <90>;
+	// no-sd;
+	// no-mmc;
+	supports-sdio;
+	mmc-pwrseq = <&sdio_pwrseq>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&sdmmc0_clk &sdmmc0_cmd &sdmmc0_bus4 &sdmmc0_det>;
+	status = "okay";
+};
+
+&pinctrl{
+	sdmmc0 {
+		sdmmc0_det: sdmmc0-det {
+			rockchip,pins =
+				/* sdmmc0_det */
+				<3 RK_PA1 1 &pcfg_pull_down>;
+		};
+	};
+};
+
+
+/**********ETH**********/
+// &gmac {
+// 	status = "okay";
+// };
+
+/**********USB**********/
+
+&u2phy {
+	status = "okay";
+};
+
+&u2phy_otg {
+	status = "okay";
+};
+
+&usbdrd {
+	status = "okay";
+};
+
+&usbdrd_dwc3 {
+	status = "okay";
+	extcon = <&u2phy>;
+	dr_mode = "peripheral";
+	// dr_mode = "host";
+};
+
+// &pinctrl{
+// 	otg_switch_en: otg_switch_en {
+// 		rockchip,pins =
+// 			/* otg_switch_en */
+// 			<4 RK_PC1 1 &pcfg_pull_up>;
+// 	};
+// };
+
+/**********RTC**********/
+// &rtc {
+// 	status = "okay";
+// };
+
+/**********BT**********/
+// &uart1 {
+// 	status = "okay";
+// 	pinctrl-names = "default";
+// 	pinctrl-0 = <&uart1m0_xfer &uart1m0_ctsn>;
+// };
+
+// &pinctrl {
+// 	wireless-bluetooth {
+// 		uart1_gpios: uart1-gpios {
+// 			rockchip,pins = <0 RK_PA5 RK_FUNC_GPIO &pcfg_pull_none>;
+// 		};
+// 	};
+// };
+
+/**********SPI**********/
+&spi0 {
+	status = "okay";
+	spidev@0 {
+		spi-max-frequency = <50000000>;
+	};
+};
