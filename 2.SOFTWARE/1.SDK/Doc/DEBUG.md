@@ -20,6 +20,7 @@
 12. [OEM 分区构建](#12-oem-分区构建)
 13. [烧录镜像](#13-烧录镜像)
 14. [完整修改文件清单](#14-完整修改文件清单)
+15. [MaskROM 模式下 download.bin 下载失败 (DDR 污染)](#15-maskrom-模式下-downloadbin-下载失败-ddr-污染)
 
 ---
 
@@ -592,3 +593,168 @@ sysdrv/out/kernel_drv_ko/
 | `project/cfg/BoardConfig_IPC/overlay/*/etc/init.d/S90wlan0` | 新建，WiFi 自启动脚本 |
 | `/etc/wpa_supplicant.conf` | 移除无效 `ctrl_interface` 行 |
 | `/etc/shadow` | root 密码 hash 改为 MD5（`$1$`） |
+
+---
+
+## 15. MaskROM 模式下 download.bin 下载失败 (DDR 污染)
+
+**日期**: 2026-05-28
+**工具**: `upgrade_tool` v2.17 / `rkdeveloptool` v1.2
+
+### 15.1 现象
+
+板子显示为 MaskROM 模式（`lsusb` 可见 `2207:110c`，`upgrade_tool LD` 显示 `Mode=Maskrom`），但执行 `upgrade_tool DB download.bin` 时报错：
+
+```
+Download boot failed!
+Note:please check ddr,please reset device and retry
+```
+
+或者是：
+
+```
+Download Boot Fail
+```
+
+`upgrade_tool TD`、`upgrade_tool UF` 同样失败。
+
+### 15.2 根因：eMMC 中有效固件导致 DDR 被提前初始化
+
+#### 启动流程
+
+```
+上电 → MaskROM(芯片ROM固化) → 扫描启动源 → 加载 SPL → DDR初始化 → U-Boot → Kernel
+```
+
+#### MaskROM 的启动源扫描顺序
+
+```
+1. SPI Flash
+2. eMMC           ← 如果 eMMC 中有有效固件，MaskROM 会加载它
+3. SD Card
+4. USB 从设备模式  ← 只有前面全部找不到时，才进入 USB 等待
+```
+
+#### DDR 污染机制
+
+```
+上电
+ │
+ ├─ MaskROM 扫描 eMMC
+ │     └─ 发现有效固件 → 加载 U-Boot SPL 到内部 SRAM
+ │           │
+ │           └─ U-Boot SPL 初始化 DDR 控制器 (DDR4 @ 792MHz)
+ │                 │                          ↑
+ │                 │              DDR PHY PLL 锁定、寄存器被改写
+ │                 │
+ │                 └─ SPL 执行失败/超时/看门狗复位
+ │                       │
+ │                       └─ 芯片复位
+ │                             │
+ │                             └─ 再次进入 MaskROM → USB 等待 (2207:110c)
+ │                                   │
+ │                                   │   ⚠ DDR 控制器寄存器未复位！
+ │                                   │   PLL 仍在锁定状态
+ │                                   │   PHY 处于已训练状态
+ │                                   │
+ │                                   └─ 你发送 download.bin
+ │                                         │
+ │                                         └─ MiniLoader 尝试初始化 DDR
+ │                                               │
+ │                                               └─ 寄存器写入冲突
+ │                                                  DDR PHY 重新训练失败
+ │                                                  → "check ddr"
+```
+
+#### 关键点
+
+Rockchip 芯片的 MaskROM 复位 **不会复位 DDR 控制器**。DDR PHY 的 PLL 和寄存器在 SPL 初始化后保持其状态，即使芯片随后看门狗复位回到 MaskROM 也不清零。MiniLoader 内部的 DDR 初始化代码假设 DDR 控制器处于 POR（上电复位）默认状态，当遇到已在运行的 DDR PHY 时，寄存器写入序列失败，DDR 训练超时。
+
+```
+状态 A（正常，eMMC 空）:              状态 B（异常，eMMC 有固件）:
+┌──────────────┐                     ┌──────────────┐
+│ DDR 控制器    │                     │ DDR 控制器    │
+│ 处于复位状态   │                     │ 已被 U-Boot   │
+│ 寄存器为默认值 │                     │ SPL 配置过    │
+│              │                     │ PLL 已锁定    │
+│ 可被 MiniLoader│                    │ PHY 已训练    │
+│ 正常初始化     │                     │ 重新初始化    │
+│              │                     │ → 冲突失败    │
+└──────────────┘                     └──────────────┘
+```
+
+### 15.3 解决方案
+
+**方案 1：按住 BOOT 键上电（推荐）**
+
+```
+1. 拔掉 USB，等待 10-15 秒（让电容放电，DDR PHY 回到复位）
+2. 按住板子上的 BOOT 按钮不放
+3. 插入 USB
+4. 等待 2 秒
+5. 松开 BOOT 按钮
+6. 执行 upgrade_tool DB download.bin → 正常
+```
+
+**原理**：BOOT 按钮短接 eMMC CLK 到 GND，eMMC 无法响应 MaskROM 的读命令，MaskROM 认为 eMMC 不存在，跳过它直接进入 USB 等待模式。全程 DDR 控制器保持 POR 默认状态。
+
+```
+正常上电:                           按住 BOOT 上电:
+┌─────────┐                        ┌─────────┐
+│  eMMC   │                        │  eMMC   │
+│  CLK 正常 │                       │  CLK → GND │ ← 短接到地
+│         │                        │  无时钟信号 │
+│ MaskROM │                        │ MaskROM    │
+│ 能读出  │                        │ 读 eMMC    │
+│ U-Boot  │                        │ → 失败!    │
+└─────────┘                        └─────────┘
+                                         │
+                                         ▼
+                                  MaskROM 跳过 eMMC
+                                  DDR 保持复位状态
+                                         │
+                                         ▼
+                                  进入 USB 等待模式
+                                  DDR 干净 → download.bin 正常
+```
+
+**方案 2：短接 eMMC CLK**
+
+如果没有 BOOT 按钮，直接短接 eMMC 芯片的 CLK 引脚到 GND 再上电。
+
+### 15.4 复现条件
+
+| 条件 | 是否复现 |
+|------|----------|
+| eMMC 中无有效固件 | ❌ 不复现 |
+| eMMC 中有有效固件，上电直接进 MaskROM | ✅ 必现 |
+| 按住 BOOT 键上电进 MaskROM | ❌ 不复现 |
+| 擦除 eMMC 后立即重新进 MaskROM | ❌ 不复现（eMMC 已空） |
+| 烧录完成后不拔 USB，直接再操作 | ❌ 不复现（DDR 由 MiniLoader 管理） |
+
+### 15.5 排查记录
+
+| 时间 | 操作 | 结果 |
+|------|------|------|
+| 首次上电 | `upgrade_tool DB` | ✅ Download boot ok |
+| 首次上电 | `upgrade_tool UF` 烧录固件 | ✅ 成功 |
+| 烧录后重新上电（未按 BOOT） | `upgrade_tool DB` | ❌ check ddr |
+| 拔电 3 秒重插（未按 BOOT） | `upgrade_tool DB` | ❌ check ddr |
+| 尝试旧版本 download.bin | `upgrade_tool DB` | ❌ check ddr |
+| 尝试 rkdeveloptool db | `rkdeveloptool db` | ❌ Opening loader failed |
+| **按住 BOOT 键上电** | `upgrade_tool DB` | ✅ Download boot ok |
+
+### 15.6 相关命令
+
+```bash
+# 检查板子状态
+lsusb | grep 2207
+upgrade_tool LD
+
+# 正常操作流程（必须先按 BOOT 上电）
+upgrade_tool DB download.bin    # 下载 MiniLoader
+upgrade_tool UF update.img      # 烧录固件
+upgrade_tool EF download.bin    # 擦除全部 flash
+upgrade_tool RCI                # 读芯片信息
+upgrade_tool RFI                # 读 Flash 信息
+```

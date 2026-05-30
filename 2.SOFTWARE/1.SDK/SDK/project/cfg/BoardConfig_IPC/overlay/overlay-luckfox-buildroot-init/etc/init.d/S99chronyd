@@ -1,0 +1,9 @@
+#!/bin/sh
+case "$1" in
+    start)
+        /usr/sbin/chronyd
+        ;;
+    stop)
+        killall chronyd
+        ;;
+esac
