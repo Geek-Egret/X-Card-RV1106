@@ -11,6 +11,8 @@ adb push wpa_supplicant.conf /etc
 adb push chrony.conf /etc
 # add profile.d file
 adb push user.sh /etc/profile.d
+# add usb_power.sh
+adb push usb_power.sh /root
 # enter adb shell
 adb shell -t "cd /oem/usr/ko && chmod u+x aic8800"
 # add aliyun pypi to board
