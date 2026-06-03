@@ -1,0 +1,10 @@
+<div class="project-detail"><h1>🧠 边缘推理网关</h1><div class="detail-meta">标签：AIoT / 边缘计算 / 推理</div><div class="detail-img-placeholder">🧠</div><h2>概述</h2><p>构建轻量级边缘端 AI 推理网关，支持将训练好的模型部署到 RV1106 板卡上，实现本地实时推理，无需依赖云端。</p><h2>核心功能</h2><ul><li>支持 ONNX / RKNN 模型格式</li><li>模型量化与优化工具链</li><li>RESTful API 接口</li><li>多模型并行调度</li><li>推理结果可视化面板</li></ul><h2>架构设计</h2><div class="detail-imgs"><div class="detail-imgs-placeholder">🏗️ 架构图</div></div><h2>性能指标</h2><ul><li>MobileNetV2 推理延迟：< 10ms</li><li>YOLOv5s 推理延迟：< 50ms</li><li>支持同时运行 3 个轻量模型</li><li>典型功耗：< 2W</li></ul><h2>快速开始</h2><pre><code># 转换模型为 RKNN 格式
+python3 convert.py --input model.onnx --output model.rknn
+
+# 启动推理服务
+python3 server.py --model model.rknn --port 8080
+
+# 调用 API
+curl -X POST http://localhost:8080/infer \
+  -H "Content-Type: application/json" \
+  -d '{"image": "base64..."}'</code></pre><a href="/articles" class="back-link">← 返回文章列表</a></div>
