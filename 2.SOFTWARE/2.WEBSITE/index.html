@@ -255,7 +255,7 @@ a:hover { color: #1a73e8; text-decoration: underline; }
 /* Splash screen */
 #splash {
   position: fixed; inset: 0; z-index: 9999;
-  background: var(--theme);
+  background: #0a0a12;
   display: flex; align-items: center; justify-content: center;
   transition: opacity .6s ease, visibility .6s ease;
 }
@@ -285,10 +285,10 @@ a:hover { color: #1a73e8; text-decoration: underline; }
 <header class="header">
   <nav class="nav">
       <div class="logo">
-        <a href="index.html" accesskey="h" title="Leeeezy's Studio (Alt + H)">Leeeezy's Studio</a>
+        <a href="/" accesskey="h" title="Leeeezy's Studio (Alt + H)">Leeeezy's Studio</a>
       </div>
       <ul id="menu">
-      <li><a href="index.html" class="active" title="首页"><span>首页</span></a></li>
+      <li><a href="/" class="active" title="首页"><span>首页</span></a></li>
       <li><a href="/products" title="产品"><span>产品</span></a></li>
       <li><a href="/articles" title="文章"><span>文章</span></a></li>
       <li><a href="/about" title="关于"><span>关于</span></a></li>
@@ -372,7 +372,7 @@ a:hover { color: #1a73e8; text-decoration: underline; }
   </span>
 </footer>
 
-<a href="index.html#top" aria-label="go to top" title="回到顶部" class="top-link" id="top-link">
+<a href="/#top" aria-label="go to top" title="回到顶部" class="top-link" id="top-link">
   <svg viewBox="0 0 12 6" fill="currentColor"><path d="M12 6H0l6-6z"/></svg>
 </a>
 
@@ -386,8 +386,6 @@ a:hover { color: #1a73e8; text-decoration: underline; }
   // Set splash background to match theme
   var stored = localStorage.getItem('pref-theme');
   var isDark = stored ? stored === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
-  splash.style.background = 'transparent';
-
   if (hasVisited) {
     // Already visited this session, remove splash immediately
     splash.parentNode.removeChild(splash);
@@ -543,7 +541,7 @@ document.addEventListener('click', function(e) {
   var main = document.querySelector('.main');
   if (path === '/') {
     window.history.pushState({page:'home'}, '', '/');
-    location.reload();
+    window.location.href = '/';
   } else {
     window.history.pushState({page:path}, '', path);
     loadPage(path, main);
@@ -551,7 +549,8 @@ document.addEventListener('click', function(e) {
 });
 
 function loadPage(path, container) {
-  fetch(path + '.html')
+  var url = /\.html$/.test(path) ? path : path + '.html';
+  fetch(url)
     .then(function(res) {
       if (!res.ok) throw new Error('404');
       return res.text();
@@ -560,7 +559,7 @@ function loadPage(path, container) {
       container.innerHTML = html;
     })
     .catch(function() {
-      container.innerHTML = '<div class="page-content"><h1>404</h1><p>页面未找到。</p><a href="index.html" class="back-link">← 返回首页</a></div>';
+      container.innerHTML = '<div class="page-content"><h1>404</h1><p>页面未找到。</p><a href="/" class="back-link">← 返回首页</a></div>';
     });
 }
 
@@ -570,7 +569,7 @@ window.addEventListener('popstate', function(e) {
     var path = e.state.page;
     var main = document.querySelector('.main');
     if (path === 'home') {
-      location.reload();
+      window.location.href = '/';
     } else {
       document.querySelectorAll('#menu a').forEach(function(a) {
         a.classList.toggle('active', a.getAttribute('href') === path);
