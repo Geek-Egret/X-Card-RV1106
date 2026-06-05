@@ -164,6 +164,32 @@ a:hover { color: #1a73e8; text-decoration: underline; }
 .page-content .back-link { display: inline-block; margin-top: 24px; padding: 8px 16px; background: var(--entry); border: 1px solid var(--border); border-radius: var(--radius); font-size: .9em; }
 .page-content .back-link:hover { border-color: #1a73e8; box-shadow: 0 0 10px rgba(26, 115, 232, 0.2); text-decoration: none; }
 
+/* Markdown rendered content */
+.page-content blockquote {
+  border-left: 3px solid #1a73e8; padding: 8px 16px; margin: 12px 0;
+  background: var(--entry); border-radius: 0 var(--radius) var(--radius) 0;
+  color: var(--secondary);
+}
+.page-content hr { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+.page-content img { max-width: 100%; border-radius: var(--radius); }
+.page-content ol { padding-left: 20px; margin-bottom: 12px; }
+.page-content ol li { color: var(--content); margin-bottom: 4px; }
+.page-content table { width: 100%; border-collapse: collapse; margin: 16px 0; }
+.page-content th, .page-content td {
+  border: 1px solid var(--border); padding: 8px 12px; text-align: left; font-size: .9em;
+}
+.page-content th { background: var(--entry); font-weight: 600; color: var(--primary); }
+.page-content td { color: var(--content); }
+.page-content code {
+  background: var(--code-bg); padding: 2px 6px; border-radius: 4px;
+  font-size: .9em; font-family: "SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;
+}
+.page-content pre {
+  background: var(--code-block-bg); color: #e0e0e0; padding: 16px; border-radius: var(--radius);
+  overflow-x: auto; margin-bottom: 16px; font-size: .9em; line-height: 1.5;
+}
+.page-content pre code { background: none; padding: 0; color: inherit; }
+
 /* Tags cloud */
 .tags-cloud { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
 .tag-item { padding: 6px 16px; background: var(--entry); border: 1px solid var(--border); border-radius: var(--radius); font-size: .9em; color: var(--secondary); transition: all .2s ease; cursor: pointer; }
@@ -354,6 +380,13 @@ a:hover { color: #1a73e8; text-decoration: underline; }
         </div>
         <div class="entry-date">2026-05-30</div>
       </a>
+      <a href="/articles/welcome.md" class="entry-item" style="text-decoration:none;color:inherit;display:flex;">
+        <div>
+          <div class="entry-title">网站已支持 Markdown 文章</div>
+          <div class="entry-tags"><span>公告</span><span>Markdown</span></div>
+        </div>
+        <div class="entry-date">2026-06-04</div>
+      </a>
     </div>
   </div>
 </main>
@@ -522,6 +555,104 @@ a:hover { color: #1a73e8; text-decoration: underline; }
 </script>
 
 <script>
+// Markdown parser (renders .md files to HTML)
+function parseMarkdown(md) {
+  var lines = md.split('\n');
+  var out = [];
+  var inCode = false;
+  var codeBuf = [];
+  var listType = null;
+  var i = 0;
+
+  function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+  function inline(s) {
+    s = esc(s);
+    s = s.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1">');
+    s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+    s = s.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
+    s = s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    s = s.replace(/\*(.+?)\*/g, '<em>$1</em>');
+    s = s.replace(/~~(.+?)~~/g, '<del>$1</del>');
+    s = s.replace(/`([^`]+)`/g, '<code>$1</code>');
+    return s;
+  }
+
+  function closeList() {
+    if (listType) { out.push('</' + listType + '>'); listType = null; }
+  }
+
+  while (i < lines.length) {
+    var line = lines[i];
+
+    if (/^```/.test(line)) {
+      closeList();
+      if (inCode) {
+        out.push('<pre><code>' + codeBuf.join('\n') + '</code></pre>');
+        codeBuf = [];
+        inCode = false;
+      } else {
+        inCode = true;
+      }
+      i++;
+      continue;
+    }
+
+    if (inCode) {
+      codeBuf.push(esc(line));
+      i++;
+      continue;
+    }
+
+    var t = line.trim();
+    if (!t) { closeList(); out.push(''); i++; continue; }
+
+    var h = t.match(/^(#{1,4})\s+(.+)/);
+    if (h) { closeList(); out.push('<h' + h[1].length + '>' + inline(h[2]) + '</h' + h[1].length + '>'); i++; continue; }
+
+    if (/^---$/.test(t)) { closeList(); out.push('<hr>'); i++; continue; }
+
+    if (/^>\s/.test(t)) { closeList(); out.push('<blockquote>' + inline(t.replace(/^>\s*/, '')) + '</blockquote>'); i++; continue; }
+
+    if (/^[-*]\s/.test(t)) {
+      if (listType !== 'ul') { closeList(); out.push('<ul>'); listType = 'ul'; }
+      out.push('<li>' + inline(t.replace(/^[-*]\s+/, '')) + '</li>');
+      i++; continue;
+    }
+
+    if (/^\d+\.\s/.test(t)) {
+      if (listType !== 'ol') { closeList(); out.push('<ol>'); listType = 'ol'; }
+      out.push('<li>' + inline(t.replace(/^\d+\.\s+/, '')) + '</li>');
+      i++; continue;
+    }
+
+    // Table
+    if (/^\|.+\|$/.test(t)) {
+      closeList();
+      var isHeader = i + 1 < lines.length && /^\|[\s\-:]+\|$/.test(lines[i + 1].trim());
+      if (isHeader) {
+        var cols = t.split('|').filter(function(c) { return c.trim(); });
+        out.push('<table><thead><tr>' + cols.map(function(c) { return '<th>' + inline(c.trim()) + '</th>'; }).join('') + '</tr></thead><tbody>');
+        i += 2;
+        while (i < lines.length && /^\|.+\|$/.test(lines[i].trim())) {
+          var row = lines[i].trim().split('|').filter(function(c) { return c.trim(); });
+          out.push('<tr>' + row.map(function(c) { return '<td>' + inline(c.trim()) + '</td>'; }).join('') + '</tr>');
+          i++;
+        }
+        out.push('</tbody></table>');
+        continue;
+      }
+    }
+
+    closeList();
+    out.push('<p>' + inline(t) + '</p>');
+    i++;
+  }
+  closeList();
+  if (inCode) { out.push('<pre><code>' + codeBuf.join('\n') + '</code></pre>'); }
+  return out.join('\n');
+}
+
 // SPA-style page loading
 document.addEventListener('click', function(e) {
   var link = e.target.closest('a');
@@ -532,12 +663,10 @@ document.addEventListener('click', function(e) {
   e.preventDefault();
   var path = href.replace(/\/$/, '') || '/';
 
-  // Update active menu
   document.querySelectorAll('#menu a').forEach(function(a) {
     a.classList.toggle('active', a.getAttribute('href') === href);
   });
 
-  // Simple page routing
   var main = document.querySelector('.main');
   if (path === '/') {
     window.history.pushState({page:'home'}, '', '/');
@@ -549,18 +678,38 @@ document.addEventListener('click', function(e) {
 });
 
 function loadPage(path, container) {
+  function show404() {
+    container.innerHTML = '<div class="page-content"><h1>404</h1><p>页面未找到。</p><a href="/" class="back-link">← 返回首页</a></div>';
+  }
+
+  function renderMd(md) {
+    container.innerHTML = '<div class="page-content">' + parseMarkdown(md) + '<a href="/" class="back-link">← 返回首页</a></div>';
+  }
+
+  // Explicit .md file
+  if (/\.md$/.test(path)) {
+    fetch(path)
+      .then(function(res) { if (!res.ok) throw Error(); return res.text(); })
+      .then(renderMd).catch(show404);
+    return;
+  }
+
   var url = /\.html$/.test(path) ? path : path + '.html';
   fetch(url)
     .then(function(res) {
-      if (!res.ok) throw new Error('404');
-      return res.text();
+      if (!res.ok) {
+        // Try .md fallback if no explicit extension
+        if (!/\.html$/.test(path)) {
+          return fetch(path + '.md').then(function(r) {
+            if (!r.ok) throw Error();
+            return r.text().then(renderMd);
+          });
+        }
+        throw Error();
+      }
+      return res.text().then(function(html) { container.innerHTML = html; });
     })
-    .then(function(html) {
-      container.innerHTML = html;
-    })
-    .catch(function() {
-      container.innerHTML = '<div class="page-content"><h1>404</h1><p>页面未找到。</p><a href="/" class="back-link">← 返回首页</a></div>';
-    });
+    .catch(show404);
 }
 
 // Handle browser back/forward
