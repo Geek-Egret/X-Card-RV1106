@@ -1,0 +1,70 @@
+{
+  "meta": {
+    "title": "Leeeezy's Studio",
+    "keywords": "geekegret,RV1106,嵌入式,AIoT,工作室",
+    "description": "拥抱开源，回馈开源。",
+    "author": "geekegret",
+    "themeColor": "#1a1a2e",
+    "robots": "index, follow"
+  },
+  "nav": [
+    { "label": "首页", "href": "/" },
+    { "label": "产品", "href": "/products" },
+    { "label": "文章", "href": "/articles" },
+    { "label": "关于", "href": "/about" },
+    { "label": "联系", "href": "/contact" }
+  ],
+  "profile": {
+    "avatar": "assets/avatar.png",
+    "logo": "assets/logo.png",
+    "name": "GeekEgret Studio",
+    "tagline": "拥抱开源，回馈开源。"
+  },
+  "social": {
+    "github": "https://github.com/geekegret",
+    "bilibili": "https://space.bilibili.com/geekegret",
+    "taobao": "https://shop.m.taobao.com/shop/geekegret",
+    "email": "geekegret@example.com",
+    "rss": "/rss.xml"
+  },
+  "pages": {
+    "home": {
+      "sectionTitle": "📝 最新动态",
+      "maxArticles": 6
+    },
+    "articles": {
+      "title": "📝 文章",
+      "subtitle": "geekegret 工作室的技术分享与思考。",
+      "emptyMsg": "暂无文章",
+      "noMatchMsg": "无匹配文章"
+    },
+    "products": {
+      "title": "🛒 产品",
+      "subtitle": "geekegret 工作室推出的硬件与软件产品。",
+      "emptyMsg": "暂无产品",
+      "noMatchMsg": "无匹配产品"
+    }
+  },
+  "aboutPage": {
+    "title": "🙋 关于",
+    "content": ""
+  },
+  "contactPage": {
+    "title": "📬 联系",
+    "content": ""
+  },
+  "footer": {
+    "poweredBy": "Powered by <a href=\"https://nginx.org/\" target=\"_blank\">Nginx</a> on <a href=\"https://www.rock-chips.com/\" target=\"_blank\">Rockchip RV1106</a>"
+  },
+  "particles": {
+    "enabled": true,
+    "blur": 1.5,
+    "densityDivisor": 2200,
+    "maxStars": 500
+  },
+  "splash": {
+    "enabled": true,
+    "duration": 1500,
+    "background": "#0a0a12"
+  }
+}

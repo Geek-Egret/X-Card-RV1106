@@ -1,3 +1,4 @@
+tags: 公告, Markdown
 # 网站已支持 Markdown 文章
 
 > 现在你可以直接编写 `.md` 文件作为文章，无需手工编写 HTML。

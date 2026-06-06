@@ -10,22 +10,18 @@
 ```
 /usr/html/                          # Nginx root (板卡端)
 ├── index.html                      # 主页 (SPA, 包含所有 CSS/JS)
-├── about.html                      # 关于页面
-├── articles.html                   # 文章列表页
-├── products.html                   # 产品列表页
-├── contact.html                    # 联系页面
+├── param.json                      # 全局可调参数（★ 自定义入口）
+├── about.html                      # 关于页面片段
+├── articles.html                   # 文章列表页片段（已废弃，动态生成）
+├── products.html                   # 产品列表页片段（已废弃，动态生成）
+├── contact.html                    # 联系页面片段
 ├── 50x.html                        # 错误页面
 ├── assets/
 │   ├── logo.png                    # 网站 Logo
 │   └── avatar.png                  # 头像
-├── articles/                       # 文章详情
-│   ├── rv1106-camera.html
-│   ├── edge-inference.html
-│   ├── geekegret-studio.html
-│   ├── smart-home.html
-│   ├── sensor-network.html
+├── articles/                       # 文章详情（自动发现，无需手动引用）
 │   └── welcome.md                  # Markdown 文章示例
-└── products/                       # 产品详情
+└── products/                       # 产品详情（自动发现，无需手动引用）
     ├── rv1106-devkit.html
     ├── ai-cam-module.html
     ├── edge-gateway.html
@@ -36,32 +32,113 @@
 
 ---
 
-## 2. 技术架构
+## 2. 自定义网站参数（★ 新增）
+
+网站所有可调参数集中在 **`param.json`** 文件中，修改后 scp 到板卡即可实时生效，无需修改 HTML/JS 代码。
+
+### 2.1 参数速查表
+
+| 分类 | 参数 | 默认值 | 说明 |
+|------|------|--------|------|
+| **meta** | `title` | `Leeeezy's Studio` | 浏览器标题栏 & Logo 文字 |
+| | `keywords` | `geekegret,RV1106,...` | SEO 关键字 |
+| | `description` | `拥抱开源，回馈开源。` | 页面描述 |
+| | `author` | `geekegret` | 网站作者 |
+| | `themeColor` | `#1a1a2e` | 浏览器主题色 |
+| **nav** | `[]` | 5 个菜单项 | 导航栏，可增减改 |
+| **profile** | `avatar` | `assets/avatar.png` | 头像路径 |
+| | `name` | `GeekEgret Studio` | 工作室名称 |
+| | `tagline` | `拥抱开源，回馈开源。` | 首页标语 |
+| **social** | `github` | `https://github.com/...` | GitHub 链接 |
+| | `bilibili` | `https://space.bilibili...` | B站链接 |
+| | `taobao` | `https://shop.m.taobao...` | 淘宝链接 |
+| | `email` | `geekegret@example.com` | 邮箱 |
+| | `rss` | `/rss.xml` | RSS 地址 |
+| **pages.home** | `sectionTitle` | `📝 最新动态` | 首页文章区标题 |
+| | `maxArticles` | `6` | 首页最多显示文章数 |
+| **pages.articles** | `title` | `📝 文章` | 文章页标题 |
+| | `subtitle` | 工作室技术分享... | 文章页副标题 |
+| | `emptyMsg` | `暂无文章` | 无文章提示 |
+| | `noMatchMsg` | `无匹配文章` | tag 筛选无结果 |
+| **pages.products** | `title` | `🛒 产品` | 产品页标题 |
+| | `subtitle` | 工作室推出... | 产品页副标题 |
+| | `emptyMsg` | `暂无产品` | 无产品提示 |
+| | `noMatchMsg` | `无匹配产品` | tag 筛选无结果 |
+| **footer** | `poweredBy` | `Powered by Nginx...` | 页脚 HTML |
+| **particles** | `enabled` | `true` | 星空背景开关 |
+| | `blur` | `1.5` | 星空模糊度(px) |
+| | `densityDivisor` | `2200` | 星星密度 (面积除以该值) |
+| | `maxStars` | `500` | 最大星星数量 |
+| **splash** | `enabled` | `true` | 开机动画开关 |
+| | `duration` | `1500` | 动画时长(ms) |
+| | `background` | `#0a0a12` | 动画背景色 |
+
+### 2.2 自定义示例
+
+**改标题 & 标语：**
+```json
+"meta": { "title": "我的工作室" },
+"profile": { "tagline": "探索技术的无限可能。" }
+```
+
+**禁用星空背景：**
+```json
+"particles": { "enabled": false }
+```
+
+**改首页显示文章数：**
+```json
+"pages": { "home": { "maxArticles": 3 } }
+```
+
+**添加导航菜单项：**
+```json
+"nav": [
+  { "label": "首页", "href": "/" },
+  { "label": "博客", "href": "/articles" },
+  { "label": "友链", "href": "/links" }
+]
+```
+
+### 2.3 生效方式
+
+1. 修改本地 `param.json`
+2. scp 到板卡：`sshpass -p 'geekegret' scp param.json root@192.168.1.9:/usr/html/`
+3. 修复权限：`ssh root@192.168.1.9 'chmod 644 /usr/html/param.json'`
+4. 浏览器强制刷新（Ctrl+Shift+R）即可看到变化
+
+> 如果 param.json 不存在或格式错误，网站会使用 index.html 中的默认值正常运行。
+
+---
+
+## 3. 技术架构
 
 ### SPA 单页应用
 
 网站采用 SPA (Single Page Application) 架构：
 
 - `index.html` 是唯一的完整页面（含 header、footer、样式、脚本）
-- 其他页面（about、articles、products、contact 及详情页）只包含 `<div class="page-content">...</div>` 片段
-- 点击导航链接时，JS 拦截点击，通过 `fetch()` 加载片段并替换 `<main>` 区域
+- `param.json` 是全局配置文件，页面加载时通过 JS 动态读取并应用
+- 文章/产品列表通过 Nginx autoindex JSON + JS 动态发现，无需手动维护引用
+- 导航链接通过 JS 拦截，`fetch()` 加载片段并替换 `<main>` 区域
 - URL 通过 `history.pushState()` 同步更新，支持浏览器前进/后退
+- Nginx `try_files $uri /index.html;` 保证刷新任何页面都返回 200
 
 ### 导航路由表
 
-| 菜单 | href | 加载的文件 | 说明 |
-|------|------|-----------|------|
-| 首页 | `/` | 完整页面刷新 | 回到主页 |
-| 产品 | `/products` | `products.html` | 产品列表 |
-| 文章 | `/articles` | `articles.html` | 文章列表 |
-| 关于 | `/about` | `about.html` | 关于页 |
-| 联系 | `/contact` | `contact.html` | 联系页 |
+| 菜单 | href | 行为 |
+|------|------|------|
+| 首页 | `/` | 完整页面刷新 |
+| 产品 | `/products` | JS fetch `/products-json/` 动态渲染 |
+| 文章 | `/articles` | JS fetch `/articles-json/` 动态渲染 |
+| 关于 | `/about` | JS fetch `about.html` 片段 |
+| 联系 | `/contact` | JS fetch `contact.html` 片段 |
 
-详情页路由（`href="/articles/xxx"`）会尝试加载 `articles/xxx.html`，若不存在则尝试 `articles/xxx.md`。
+详情页路由会尝试加载 `articles/xxx.html`，若不存在则尝试 `articles/xxx.md`。
 
 ---
 
-## 3. 部署到板卡
+## 4. 部署到板卡
 
 ### 方式一：部署全部文件
 
@@ -75,7 +152,7 @@ sshpass -p 'geekegret' scp -r \
 
 ```bash
 sshpass -p 'geekegret' scp \
-  2.SOFTWARE/2.WEBSITE/index.html \
+  2.SOFTWARE/2.WEBSITE/param.json \
   root@192.168.1.9:/usr/html/
 ```
 
@@ -83,63 +160,28 @@ sshpass -p 'geekegret' scp \
 
 ```bash
 ssh root@192.168.1.9 'chmod 755 /usr/html/articles /usr/html/products'
-ssh root@192.168.1.9 'chmod 644 /usr/html/articles/*.html /usr/html/products/*.html'
+ssh root@192.168.1.9 'chmod 644 /usr/html/param.json'
+ssh root@192.168.1.9 'chmod 644 /usr/html/articles/* /usr/html/products/*'
 ```
 
 ---
 
-## 4. 添加新文章
+## 5. 添加新文章 / 产品（★ 自动发现）
 
-### HTML 文章
+文章和产品列表已实现全动态——只需将文件放入对应目录即可，无需修改任何 HTML。
 
-1. 在 `articles/` 目录创建 `my-article.html`
-2. 文件内容只包含 `<div class="page-content">...</div>` 片段
-3. 在 `index.html` 的最新动态区域添加链接：
-   ```html
-   <a href="/articles/my-article" class="entry-item">...</a>
-   ```
-4. 在 `articles.html` 的文章列表中添加卡片：
-   ```html
-   <a href="/articles/my-article" class="project-card">...</a>
-   ```
+### 文章
 
-### Markdown 文章（推荐）
+1. 在 `articles/` 目录创建 `.md` 或 `.html` 文件
+2. Markdown 文件可在首行加 `tags: 标签1, 标签2` 声明标签
+3. HTML 文件标题从 `<h1>` 自动提取，标签从 `<span class="...tag...">` 或 `<div class="detail-meta">标签：</div>` 自动提取
+4. 部署到板卡后，首页和文章列表页自动出现
 
-1. 在 `articles/` 目录创建 `my-article.md`
-2. 使用 Markdown 语法编写内容（支持标题、列表、代码块、表格等）
-3. 在首页添加链接（可带 `.md` 后缀或不带）：
-   ```html
-   <a href="/articles/my-article.md" class="entry-item">...</a>
-   ```
-4. 部署到板卡
+### 产品
 
-### 添加产品页
-
-步骤同上，在 `products/` 目录操作，在 `products.html` 中更新列表。
-
----
-
-## 5. 自定义样式
-
-所有 CSS 样式集中在 `index.html` 的 `<style>` 标签中：
-
-- CSS 变量（主题色）定义在 `:root` 选择器中
-- 修改颜色变量可统一改变整体风格
-- 修改 `--theme` 变量会影响 body/html 背景色，但不会影响 splash 屏（splash 使用固定色 `#0a0a12`）
-
-### 关键 CSS 变量
-
-```css
-:root {
-  --theme: transparent;           /* body 背景 */
-  --entry: rgba(255,255,255,0.07); /* 卡片背景 */
-  --primary: rgba(255,255,255,0.92); /* 主文字 */
-  --secondary: rgba(255,255,255,0.6); /* 次要文字 */
-  --border: rgba(255,255,255,0.22); /* 边框 */
-  --code-bg: rgba(255,255,255,0.08); /* 行内代码背景 */
-  --code-block-bg: rgba(255,255,255,0.12); /* 代码块背景 */
-}
-```
+1. 在 `products/` 目录创建 `.html` 文件
+2. 格式参照已有产品文件（`<div class="project-detail"><h1>标题</h1><div class="detail-meta">标签：xx / yy</div>...</div>`）
+3. 部署后自动出现在产品列表页
 
 ---
 
@@ -148,16 +190,26 @@ ssh root@192.168.1.9 'chmod 644 /usr/html/articles/*.html /usr/html/products/*.h
 配置文件位置: `/etc/nginx/nginx.conf`（板卡端）
 
 关键配置：
-```
+```nginx
 server {
-    listen       80;
-    server_name  localhost;
-    root         html;        # 即 /usr/html/
-    index        index.html index.htm;
+    listen 80;
+    location / {
+        root html;
+        index index.html;
+        try_files $uri /index.html;
+    }
+    location /articles-json {
+        alias /usr/html/articles;
+        autoindex on;
+        autoindex_format json;
+    }
+    location /products-json {
+        alias /usr/html/products;
+        autoindex on;
+        autoindex_format json;
+    }
 }
 ```
-
-当前没有配置 `try_files` 和 URL rewrite。SPA 的路由由前端 JS 的 pushState + fetch 实现。
 
 ---
 
@@ -165,11 +217,11 @@ server {
 
 ### 原理
 
-网站内置了一个轻量级 Markdown 解析器（在 `index.html` 的 JS 中），约 2KB，无需外部依赖。`loadPage()` 函数加载文件时的逻辑：
+内置轻量 Markdown 解析器（~2KB），支持常见语法。`loadPage()` 加载文件逻辑：
 
-1. 若路径以 `.md` 结尾 → 直接 fetch `.md` 文件，解析后渲染
-2. 若路径以 `.html` 结尾 → 直接加载 HTML 片段
-3. 若路径无扩展名 → 先尝试 `.html`，404 则尝试 `.md`
+1. 路径以 `.md` 结尾 → fetch `.md` 并解析渲染
+2. 路径以 `.html` 结尾 → 直接加载 HTML 片段
+3. 无扩展名 → 先尝试 `.html`，404 则尝试 `.md`
 
 ### 支持的语法
 
@@ -188,34 +240,35 @@ server {
 | `\| 列1 \| 列2 \|` | 表格 |
 | `---` | 分割线 |
 
-### 注意事项
+### 元数据行
 
-- 代码块内容会自动 HTML 转义，`<script>` 等不会被浏览器执行（安全）
-- 外链默认添加 `target="_blank"` 和 `rel="noopener"`
-- 表格需要表头行 + 分隔行格式
+Markdown 文件首行支持 `tags:` 元数据，示例：
+```markdown
+tags: RV1106, 教程, 嵌入式
+# 文章标题
+```
+此行会被文章列表页作为标签提取，且不会显示在正文中。
 
 ---
 
 ## 8. 常见问题
 
-### Q: 文章 404？
+### Q: 修改 param.json 后没生效？
+1. 确认文件权限 644：`chmod 644 /usr/html/param.json`
+2. 浏览器强制刷新：Ctrl+Shift+R
+3. 验证可访问：`curl http://192.168.1.9/param.json`
 
-检查文件是否存在于对应目录，确认目录权限为 755（`ls -la /usr/html/articles/`）。
+### Q: 文章 404？
+检查文件是否存在，确认目录权限 755。
 
 ### Q: 文章 403？
+目录权限不足：`chmod 755 /usr/html/articles /usr/html/products`；文件权限：`chmod 644`
 
-目录权限不足，执行：`chmod 755 /usr/html/articles /usr/html/products`
-
-### Q: SPA 路由不生效？
-
-刷新页面后如果直接访问 `/articles` 等路径会 404，因为 nginx 没有配置 fallback。建议从首页开始导航，或配置 nginx `try_files`。
+### Q: 刷新非首页 403？
+Nginx 已配置 `try_files $uri /index.html;`，确认配置已生效。
 
 ### Q: 如何本地预览？
-
-直接用浏览器打开 `index.html` 即可预览静态样式。SPA 路由的 fetch 在本地 `file://` 协议下会因跨域限制失效，建议用 `python3 -m http.server` 在本地起一个 HTTP 服务。
-
 ```bash
 cd 2.SOFTWARE/2.WEBSITE
 python3 -m http.server 8080
-# 浏览器访问 http://localhost:8080
 ```

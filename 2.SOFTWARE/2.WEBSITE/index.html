@@ -4,6 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,shrink-to-fit=no">
 <meta name="robots" content="index, follow">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>Leeeezy's Studio</title>
 <meta name="keywords" content="geekegret,RV1106,嵌入式,AIoT,工作室">
 <meta name="description" content="geekegret 的工作室 —— 探索嵌入式与 AIoT 的无限可能。">
@@ -193,7 +196,7 @@ a:hover { color: #1a73e8; text-decoration: underline; }
 /* Tags cloud */
 .tags-cloud { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
 .tag-item { padding: 6px 16px; background: var(--entry); border: 1px solid var(--border); border-radius: var(--radius); font-size: .9em; color: var(--secondary); transition: all .2s ease; cursor: pointer; }
-.tag-item:hover { border-color: #1a73e8; color: #1a73e8; box-shadow: 0 0 10px rgba(26, 115, 232, 0.2); transform: translateY(-1px); }
+.tag-item:hover, .tag-item.active { border-color: #1a73e8; color: #1a73e8; box-shadow: 0 0 10px rgba(26, 115, 232, 0.2); transform: translateY(-1px); }
 
 /* Responsive */
 @media (max-width: 600px) {
@@ -307,6 +310,79 @@ a:hover { color: #1a73e8; text-decoration: underline; }
 </style>
 </head>
 <body id="top">
+<script>
+// ====== Load & apply param.json ======
+window.__P = null;
+(function() {
+  var url = '/param.json?t=' + Date.now();
+  fetch(url)
+    .then(function(r) { if (!r.ok) throw Error('no param.json'); return r.text(); })
+    .then(function(raw) {
+      // Strip JSON comments (// and /* */) before parsing
+      var clean = raw.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+      var p = JSON.parse(clean);
+      window.__P = p;
+      // Meta
+      if (p.meta) {
+        document.title = p.meta.title || document.title;
+        var logo = document.querySelector('.logo a');
+        if (logo && p.meta.title) { logo.textContent = p.meta.title; logo.setAttribute('title', p.meta.title); }
+        var setMeta = function(n, v) {
+          var el = document.querySelector('meta[name="' + n + '"]');
+          if (el) el.setAttribute('content', v || '');
+          else { el = document.querySelector('meta[property="' + n + '"]'); if (el) el.setAttribute('content', v || ''); }
+        };
+        setMeta('keywords', p.meta.keywords);
+        setMeta('description', p.meta.description);
+        setMeta('author', p.meta.author);
+        var tc = document.querySelector('meta[name="theme-color"]');
+        if (tc && p.meta.themeColor) tc.setAttribute('content', p.meta.themeColor);
+      }
+      // Nav
+      if (p.nav && p.nav.length) {
+        var menu = document.getElementById('menu');
+        if (menu) {
+          var navHtml = '';
+          for (var i = 0; i < p.nav.length; i++) {
+            var item = p.nav[i];
+            navHtml += '<li><a href="' + item.href + '"' + (item.href === '/' ? ' class="active"' : '') + ' title="' + item.label + '"><span>' + item.label + '</span></a></li>';
+          }
+          menu.innerHTML = navHtml;
+        }
+      }
+      // Profile
+      if (p.profile) {
+        var avatar = document.querySelector('.profile_inner img');
+        if (avatar && p.profile.avatar) { avatar.src = p.profile.avatar; avatar.alt = p.profile.name || ''; }
+        var nameEl = document.querySelector('.profile_inner h1');
+        if (nameEl && p.profile.name) nameEl.textContent = p.profile.name;
+        var tagEl = document.querySelector('.profile_inner span');
+        if (tagEl && p.profile.tagline) tagEl.textContent = p.profile.tagline;
+      }
+      // Social links
+      if (p.social) {
+        var icons = document.querySelectorAll('.social-icons a');
+        var keys = ['github', 'bilibili', 'taobao', 'email', 'rss'];
+        for (var i = 0; i < icons.length && i < keys.length; i++) {
+          if (p.social[keys[i]]) icons[i].setAttribute('href', p.social[keys[i]]);
+        }
+      }
+      // Footer
+      if (p.footer) {
+        var ft = document.querySelector('.footer span:last-child');
+        if (ft && p.footer.poweredBy) ft.innerHTML = p.footer.poweredBy;
+      }
+      // Home section title
+      if (p.pages && p.pages.home && p.pages.home.sectionTitle) {
+        var st = document.querySelector('.posts-section h2');
+        if (st) st.textContent = p.pages.home.sectionTitle;
+      }
+    })
+    .catch(function() {
+      window.__P = null;
+    });
+})();
+</script>
 <div id="splash"><img src="assets/logo.png" alt="geekegret"></div>
 <header class="header">
   <nav class="nav">
@@ -328,7 +404,7 @@ a:hover { color: #1a73e8; text-decoration: underline; }
     <div class="profile_inner">
       <img draggable="false" src="assets/avatar.png" alt="geekegret" title="geekegret">
       <h1>GeekEgret Studio</h1>
-      <span>请用绝对的理智和清醒的头脑，探索嵌入式与 AIoT 的无限可能。</span>
+      <span>拥抱开源，回馈开源。</span>
       <div class="social-icons">
         <a href="https://github.com/geekegret" target="_blank" rel="noopener noreferrer me" title="GitHub">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 00-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0020 4.77 5.07 5.07 0 0019.91 1S18.73.65 16 2.48a13.38 13.38 0 00-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 005 4.77 5.44 5.44 0 003.5 8.55c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 009 18.13V22"/></svg>
@@ -351,43 +427,7 @@ a:hover { color: #1a73e8; text-decoration: underline; }
 
   <div class="posts-section">
     <h2>📝 最新动态</h2>
-    <div class="entry-list">
-      <a href="/articles/rv1106-camera" class="entry-item" style="text-decoration:none;color:inherit;display:flex;">
-        <div>
-          <div class="entry-title">RV1106 智能摄像头开发</div>
-          <div class="entry-tags"><span>RV1106</span><span>AI视觉</span><span>教程</span></div>
-        </div>
-        <div class="entry-date">2026-06-03</div>
-      </a>
-      <a href="/articles/edge-inference" class="entry-item" style="text-decoration:none;color:inherit;display:flex;">
-        <div>
-          <div class="entry-title">AIoT 边缘计算实践</div>
-          <div class="entry-tags"><span>AIoT</span><span>边缘计算</span></div>
-        </div>
-        <div class="entry-date">2026-06-01</div>
-      </a>
-      <a href="/articles/geekegret-studio" class="entry-item" style="text-decoration:none;color:inherit;display:flex;">
-        <div>
-          <div class="entry-title">在 RV1106 上搭建轻量 Web 服务</div>
-          <div class="entry-tags"><span>Nginx</span><span>RV1106</span><span>Web</span></div>
-        </div>
-        <div class="entry-date">2026-05-31</div>
-      </a>
-      <a href="/articles/geekegret-studio" class="entry-item" style="text-decoration:none;color:inherit;display:flex;">
-        <div>
-          <div class="entry-title">geekegret 工作室上线！</div>
-          <div class="entry-tags"><span>公告</span><span>工作室</span></div>
-        </div>
-        <div class="entry-date">2026-05-30</div>
-      </a>
-      <a href="/articles/welcome.md" class="entry-item" style="text-decoration:none;color:inherit;display:flex;">
-        <div>
-          <div class="entry-title">网站已支持 Markdown 文章</div>
-          <div class="entry-tags"><span>公告</span><span>Markdown</span></div>
-        </div>
-        <div class="entry-date">2026-06-04</div>
-      </a>
-    </div>
+    <div class="entry-list" id="home-articles"><p style="color:var(--secondary);text-align:center;padding:20px">加载中...</p></div>
   </div>
 </main>
 
@@ -416,6 +456,9 @@ a:hover { color: #1a73e8; text-decoration: underline; }
   var html = document.documentElement;
   var hasVisited = sessionStorage.getItem('visited');
 
+  var p = (window.__P && window.__P.splash) || {};
+  if (p.enabled === false) { if (splash.parentNode) splash.parentNode.removeChild(splash); return; }
+
   // Set splash background to match theme
   var stored = localStorage.getItem('pref-theme');
   var isDark = stored ? stored === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -424,6 +467,7 @@ a:hover { color: #1a73e8; text-decoration: underline; }
     splash.parentNode.removeChild(splash);
   } else {
     sessionStorage.setItem('visited', '1');
+    var duration = p.duration || 1500;
     // Fade out splash after page loads
     var fadeOut = function() {
       splash.classList.add('fade-out');
@@ -437,7 +481,7 @@ a:hover { color: #1a73e8; text-decoration: underline; }
     setTimeout(function() {
       if (!loaded) window.addEventListener('load', fadeOut);
       fadeOut();
-    }, 1500);
+    }, duration);
 
     splash.addEventListener('click', fadeOut);
   }
@@ -450,83 +494,125 @@ a:hover { color: #1a73e8; text-decoration: underline; }
   })();
 
   // Particle canvas background
-  (function() {
+   (function() {
+    var pp = (window.__P && window.__P.particles) || {};
+    if (pp.enabled === false) return;
     var canvas = document.createElement('canvas');
     canvas.id = 'particles';
-    canvas.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;z-index:-1;pointer-events:none';
+    var blurPx = pp.blur != null ? pp.blur : 1.5;
+    canvas.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;z-index:-1;pointer-events:none;filter:blur(' + blurPx + 'px)';
+    canvas.style.background = 'radial-gradient(ellipse at 30% 40%, rgba(20,30,80,0.3) 0%, transparent 60%), radial-gradient(ellipse at 70% 60%, rgba(15,10,40,0.25) 0%, transparent 50%)';
     document.body.insertBefore(canvas, document.body.firstChild);
     var ctx = canvas.getContext('2d');
-    var particles = [];
-    var w, h;
-    var mx = -1000, my = -1000;
+    var stars = [];
+    var w, h, time = 0;
+    var density = pp.densityDivisor || 2200;
+    var maxStars = pp.maxStars || 500;
+
+    function createStar() {
+      var rnd = Math.random();
+      var s = { x: Math.random() * w, y: Math.random() * h, phase: Math.random() * Math.PI * 2 };
+      if (rnd < 0.7) {
+        // Tiny dim stars
+        s.r = Math.random() * 0.7 + 0.2;
+        s.baseAlpha = Math.random() * 0.18 + 0.04;
+        s.vx = (Math.random() - 0.5) * 0.06;
+        s.vy = Math.random() * 0.04 + 0.01;
+        s.twinkle = Math.random() * 0.4 + 0.3;
+        s.color = [255, 255, 255];
+      } else if (rnd < 0.92) {
+        // Medium stars with subtle color
+        s.r = Math.random() * 1 + 0.4;
+        s.baseAlpha = Math.random() * 0.3 + 0.2;
+        s.vx = (Math.random() - 0.5) * 0.1;
+        s.vy = Math.random() * 0.07 + 0.02;
+        s.twinkle = Math.random() * 0.7 + 0.5;
+        var tint = Math.random();
+        if (tint < 0.65) s.color = [255, 250, 245];
+        else if (tint < 0.82) s.color = [210, 225, 255];
+        else if (tint < 0.94) s.color = [200, 210, 255];
+        else s.color = [255, 220, 180];
+      } else {
+        // Bright glowing stars
+        s.r = Math.random() * 1.8 + 1;
+        s.baseAlpha = Math.random() * 0.25 + 0.5;
+        s.vx = (Math.random() - 0.5) * 0.08;
+        s.vy = Math.random() * 0.05 + 0.01;
+        s.twinkle = Math.random() * 1 + 0.8;
+        s.color = [255, 252, 248];
+        s.glow = true;
+      }
+      return s;
+    }
+
     function resize() {
+      var oldW = w, oldH = h;
       w = canvas.width = window.innerWidth;
       h = canvas.height = window.innerHeight;
+      if (oldW && oldH) {
+        var sx = w / oldW, sy = h / oldH;
+        for (var i = 0; i < stars.length; i++) {
+          stars[i].x = Math.min(Math.max(stars[i].x * sx, 0), w);
+          stars[i].y = Math.min(Math.max(stars[i].y * sy, 0), h);
+        }
+      }
+      var target = Math.min(maxStars, Math.floor((w * h) / density));
+      while (stars.length < target) stars.push(createStar());
+      while (stars.length > target) stars.pop();
     }
     resize();
     window.addEventListener('resize', resize);
-    document.addEventListener('mousemove', function(e) { mx = e.clientX; my = e.clientY; });
-    document.addEventListener('mouseleave', function() { mx = -1000; my = -1000; });
-
-    var count = Math.min(160, Math.floor((w * h) / 5000));
-    for (var i = 0; i < count; i++) {
-      particles.push({
-        x: Math.random() * w,
-        y: Math.random() * h,
-        bx: Math.random() * w,
-        by: Math.random() * h,
-        r: Math.random() * 2 + 0.5,
-        vx: (Math.random() - 0.5) * 0.3,
-        vy: (Math.random() - 0.5) * 0.3,
-        o: Math.random() * 0.5 + 0.3
-      });
-    }
 
     function draw() {
       ctx.clearRect(0, 0, w, h);
-      var isDark = document.documentElement.classList.contains('dark');
-      var color = '255,255,255';
-      for (var i = 0; i < particles.length; i++) {
-        var p = particles[i];
-        // Base movement
-        p.bx += p.vx;
-        p.by += p.vy;
-        if (p.bx < 0) p.bx = w;
-        if (p.bx > w) p.bx = 0;
-        if (p.by < 0) p.by = h;
-        if (p.by > h) p.by = 0;
-        // Repel from mouse
-        var dx = p.bx - mx;
-        var dy = p.by - my;
-        var dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist < 100 && mx > 0) {
-          var force = (100 - dist) / 100;
-          p.x = p.bx + (dx / dist) * force * 15;
-          p.y = p.by + (dy / dist) * force * 15;
-        } else {
-          p.x += (p.bx - p.x) * 0.05;
-          p.y += (p.by - p.y) * 0.05;
-        }
+      time += 0.008;
+
+      // Glow halos for bright stars
+      for (var i = 0; i < stars.length; i++) {
+        var s = stars[i];
+        if (!s.glow) continue;
+        var a = s.baseAlpha + Math.sin(time * s.twinkle + s.phase) * 0.15;
+        a = Math.max(0, Math.min(a, 0.85));
+        var glowR = s.r * 6;
+        var grad = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, glowR);
+        grad.addColorStop(0, 'rgba(' + s.color.join(',') + ',' + a + ')');
+        grad.addColorStop(0.25, 'rgba(' + s.color.join(',') + ',' + (a * 0.3) + ')');
+        grad.addColorStop(1, 'rgba(' + s.color.join(',') + ',0)');
+        ctx.fillStyle = grad;
+        ctx.fillRect(s.x - glowR, s.y - glowR, glowR * 2, glowR * 2);
+      }
+
+      // Draw stars
+      for (var i = 0; i < stars.length; i++) {
+        var s = stars[i];
+        var a = s.baseAlpha + Math.sin(time * s.twinkle + s.phase) * 0.06;
+        a = Math.max(0.015, Math.min(a, 0.92));
+
         ctx.beginPath();
-        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(' + color + ',' + p.o + ')';
+        ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(' + s.color.join(',') + ',' + a + ')';
         ctx.fill();
-      }
-      for (var i = 0; i < particles.length; i++) {
-        for (var j = i + 1; j < particles.length; j++) {
-          var dx = particles[i].x - particles[j].x;
-          var dy = particles[i].y - particles[j].y;
-          var dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist < 120) {
-            ctx.beginPath();
-            ctx.moveTo(particles[i].x, particles[i].y);
-            ctx.lineTo(particles[j].x, particles[j].y);
-            ctx.strokeStyle = 'rgba(' + color + ',' + (0.08 * (1 - dist / 120)) + ')';
-            ctx.lineWidth = 0.5;
-            ctx.stroke();
-          }
+
+        // Cross flare for brightest stars
+        if (s.glow && a > 0.5) {
+          ctx.strokeStyle = 'rgba(' + s.color.join(',') + ',' + (a * 0.35) + ')';
+          ctx.lineWidth = 0.4;
+          var fl = s.r * 4;
+          ctx.beginPath();
+          ctx.moveTo(s.x - fl, s.y); ctx.lineTo(s.x + fl, s.y);
+          ctx.moveTo(s.x, s.y - fl); ctx.lineTo(s.x, s.y + fl);
+          ctx.stroke();
         }
+
+        // Drift
+        s.x += s.vx;
+        s.y += s.vy;
+        if (s.x < -20) s.x = w + 20;
+        if (s.x > w + 20) s.x = -20;
+        if (s.y < -20) s.y = h + 20;
+        if (s.y > h + 20) s.y = -20;
       }
+
       requestAnimationFrame(draw);
     }
     draw();
@@ -535,7 +621,8 @@ a:hover { color: #1a73e8; text-decoration: underline; }
   // Top link
   var topLink = document.getElementById('top-link');
   window.onscroll = function() {
-    if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+    var scrollY = document.documentElement.scrollTop || document.body.scrollTop;
+    if (scrollY > 800) {
       topLink.classList.add('visible');
     } else {
       topLink.classList.remove('visible');
@@ -607,6 +694,9 @@ function parseMarkdown(md) {
     var t = line.trim();
     if (!t) { closeList(); out.push(''); i++; continue; }
 
+    // Skip metadata lines in .md files
+    if (/^tags:/i.test(t)) { i++; continue; }
+
     var h = t.match(/^(#{1,4})\s+(.+)/);
     if (h) { closeList(); out.push('<h' + h[1].length + '>' + inline(h[2]) + '</h' + h[1].length + '>'); i++; continue; }
 
@@ -653,7 +743,302 @@ function parseMarkdown(md) {
   return out.join('\n');
 }
 
-// SPA-style page loading
+// ========== Dynamic article system ==========
+
+var articleMetaCache = {};
+
+function escHtml(s) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function extractTitleFromMd(text) {
+  var m = text.match(/^#\s+(.+)/m);
+  return m ? m[1].trim() : null;
+}
+
+function extractTitleFromHtml(text) {
+  var m = text.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
+  return m ? m[1].replace(/<[^>]+>/g, '').trim() : null;
+}
+
+function extractTagsFromHtml(text) {
+  var tags = [];
+  // Product detail-meta format: 标签：AI视觉 / 摄像头
+  var dm = text.match(/<div[^>]*class="[^"]*detail-meta[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
+  if (dm) {
+    var tagMatch = dm[1].match(/标签[：:]\s*(.+)/i);
+    if (tagMatch) {
+      tags = tagMatch[1].split(/[\/\s·]+/).map(function(t) { return t.trim(); }).filter(Boolean);
+    }
+  }
+  // Article entry-tags format: <span class="...tag...">text</span>
+  if (!tags.length) {
+    var m = text.match(/<span[^>]*class="[^"]*tag[^"]*"[^>]*>([\s\S]*?)<\/span>/gi);
+    if (m) {
+      for (var i = 0; i < m.length; i++) {
+        var inner = m[i].replace(/<[^>]+>/g, '').trim();
+        if (inner) tags.push(inner);
+      }
+    }
+  }
+  return tags;
+}
+
+function extractTagsFromMd(text) {
+  var tags = [];
+  var lines = text.split('\n');
+  for (var i = 0; i < lines.length && i < 10; i++) {
+    var m = lines[i].match(/^tags:\s*(.+)/i);
+    if (m) {
+      tags = m[1].split(/[,，]/).map(function(t) { return t.trim(); }).filter(Boolean);
+      break;
+    }
+  }
+  return tags;
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return '';
+  var d = new Date(dateStr);
+  if (isNaN(d.getTime())) return '';
+  var y = d.getFullYear();
+  var m = String(d.getMonth() + 1).padStart(2, '0');
+  var day = String(d.getDate()).padStart(2, '0');
+  return y + '-' + m + '-' + day;
+}
+
+function getItemMeta(file, basePath) {
+  basePath = basePath || '/articles/';
+  var cacheKey = basePath + file.name + '@' + file.mtime;
+  if (articleMetaCache[cacheKey]) return Promise.resolve(articleMetaCache[cacheKey]);
+
+  var url = basePath + file.name;
+  var isMd = /\.md$/i.test(file.name);
+  var isHtml = /\.html?$/i.test(file.name);
+
+  if (!isMd && !isHtml) return Promise.resolve(null);
+
+  return fetch(url, { cache: 'no-store' })
+    .then(function(res) {
+      if (!res.ok) return null;
+      return res.text();
+    })
+    .then(function(text) {
+      if (!text) return null;
+      var title = isMd ? extractTitleFromMd(text) : extractTitleFromHtml(text);
+      if (!title) title = file.name.replace(/\.(md|html?)$/i, '');
+      var tags = isMd ? extractTagsFromMd(text) : extractTagsFromHtml(text);
+      var date = formatDate(file.mtime);
+      var meta = {
+        name: file.name,
+        url: url,
+        title: title,
+        tags: tags,
+        date: date,
+        mtime: file.mtime,
+        isMd: isMd
+      };
+      articleMetaCache[cacheKey] = meta;
+      return meta;
+    });
+}
+
+function fetchArticleList() {
+  return fetch('/articles-json/', { cache: 'no-store' })
+    .then(function(res) {
+      if (!res.ok) throw Error('Failed to fetch article list');
+      return res.json();
+    })
+    .then(function(files) {
+      // Filter only html/md files, sort by mtime descending
+      var articles = files.filter(function(f) {
+        return f.type === 'file' && /\.(md|html?)$/i.test(f.name);
+      });
+      articles.sort(function(a, b) {
+        return new Date(b.mtime) - new Date(a.mtime);
+      });
+      return articles;
+    });
+}
+
+function renderHomeArticleList(articles) {
+  var container = document.getElementById('home-articles');
+  if (!container) return;
+  if (!articles.length) {
+    container.innerHTML = '<p style="color:var(--secondary);text-align:center;padding:20px">暂无文章</p>';
+    return;
+  }
+  Promise.all(articles.map(function(f) { return getItemMeta(f, '/articles/'); })).then(function(metas) {
+    var html = '';
+    for (var i = 0; i < metas.length; i++) {
+      var m = metas[i];
+      if (!m) continue;
+      var tagsHtml = '';
+      if (m.tags && m.tags.length) {
+        tagsHtml = '<div class="entry-tags">' + m.tags.map(function(t) {
+          return '<span>' + escHtml(t) + '</span>';
+        }).join('') + '</div>';
+      }
+      html += '<a href="' + m.url + '" class="entry-item" style="text-decoration:none;color:inherit;display:flex;">' +
+        '<div><div class="entry-title">' + escHtml(m.title) + '</div>' + tagsHtml + '</div>' +
+        (m.date ? '<div class="entry-date">' + m.date + '</div>' : '') + '</a>';
+    }
+    container.innerHTML = html;
+  });
+}
+
+function renderArticlesPage(container, articles) {
+  var pp = ((window.__P || {}).pages || {}).articles || {};
+  var title = pp.title || '📝 文章';
+  var subtitle = pp.subtitle || 'geekegret 工作室的技术分享与思考。';
+  var emptyMsg = pp.emptyMsg || '暂无文章';
+  var noMatchMsg = pp.noMatchMsg || '无匹配文章';
+  container.innerHTML = '<div class="page-content"><h1>' + title + '</h1><p>' + subtitle + '</p><div class="tags-cloud" id="articles-tags-filter" style="margin-bottom:20px"></div><div class="project-grid" id="articles-grid"><p style="color:var(--secondary);text-align:center;padding:20px">加载中...</p></div><a href="/" class="back-link">← 返回首页</a></div>';
+
+  var grid = document.getElementById('articles-grid');
+  if (!articles.length) {
+    grid.innerHTML = '<p style="color:var(--secondary);text-align:center;padding:20px">' + emptyMsg + '</p>';
+    return;
+  }
+  Promise.all(articles.map(function(f) { return getItemMeta(f, '/articles/'); })).then(function(metas) {
+    var placeholders = ['📷','🧠','🌐','🏠','📡','📝','🔧','💡','🎯','🚀','⚡','🔬','📚','🎨'];
+    var allMetas = metas.filter(Boolean);
+
+    // Collect unique tags
+    var tagMap = {};
+    for (var i = 0; i < allMetas.length; i++) {
+      var t = allMetas[i].tags;
+      if (t) { for (var j = 0; j < t.length; j++) { tagMap[t[j]] = true; } }
+    }
+    var allTags = Object.keys(tagMap).sort();
+
+    // Build tag filter bar
+    var filterBar = document.getElementById('articles-tags-filter');
+    var filterHtml = '<span class="tag-item active" data-tag="">全部</span>';
+    for (var i = 0; i < allTags.length; i++) {
+      filterHtml += '<span class="tag-item" data-tag="' + escHtml(allTags[i]) + '">' + escHtml(allTags[i]) + '</span>';
+    }
+    filterBar.innerHTML = filterHtml;
+
+    function renderGrid(filterTag) {
+      var html = '';
+      for (var i = 0; i < allMetas.length; i++) {
+        var m = allMetas[i];
+        if (filterTag && (!m.tags || m.tags.indexOf(filterTag) === -1)) continue;
+        var ph = placeholders[i % placeholders.length];
+        var desc = m.tags && m.tags.length ? m.tags.join(' · ') : '';
+        var tagsHtml = m.tags && m.tags.length ? m.tags.map(function(t) {
+          return '<span>' + escHtml(t) + '</span>';
+        }).join('') : '';
+        html += '<a href="' + m.url + '" class="project-card">' +
+          '<div class="card-img-placeholder">' + ph + '</div>' +
+          '<div class="card-body"><h3>' + escHtml(m.title) + '</h3>' +
+          (desc ? '<p>' + escHtml(desc) + '</p>' : '') +
+          (tagsHtml ? '<div class="card-tags">' + tagsHtml + '</div>' : '') +
+          '</div></a>';
+      }
+      grid.innerHTML = html || '<p style="color:var(--secondary);text-align:center;padding:20px">' + noMatchMsg + '</p>';
+    }
+
+    renderGrid('');
+
+    filterBar.addEventListener('click', function(e) {
+      var el = e.target.closest('.tag-item');
+      if (!el) return;
+      var tag = el.getAttribute('data-tag');
+      var items = filterBar.querySelectorAll('.tag-item');
+      for (var i = 0; i < items.length; i++) {
+        items[i].classList.toggle('active', items[i].getAttribute('data-tag') === tag);
+      }
+      renderGrid(tag);
+    });
+  });
+}
+
+function fetchProductList() {
+  return fetch('/products-json/', { cache: 'no-store' })
+    .then(function(res) {
+      if (!res.ok) throw Error('Failed to fetch product list');
+      return res.json();
+    })
+    .then(function(files) {
+      var products = files.filter(function(f) {
+        return f.type === 'file' && /\.(md|html?)$/i.test(f.name);
+      });
+      products.sort(function(a, b) {
+        return new Date(b.mtime) - new Date(a.mtime);
+      });
+      return products;
+    });
+}
+
+function renderProductsPage(container, products) {
+  var pp = ((window.__P || {}).pages || {}).products || {};
+  var title = pp.title || '🛒 产品';
+  var subtitle = pp.subtitle || 'geekegret 工作室推出的硬件与软件产品。';
+  var emptyMsg = pp.emptyMsg || '暂无产品';
+  var noMatchMsg = pp.noMatchMsg || '无匹配产品';
+  container.innerHTML = '<div class="page-content"><h1>' + title + '</h1><p>' + subtitle + '</p><div class="tags-cloud" id="products-tags-filter" style="margin-bottom:20px"></div><div class="project-grid" id="products-grid"><p style="color:var(--secondary);text-align:center;padding:20px">加载中...</p></div><a href="/" class="back-link">← 返回首页</a></div>';
+  var grid = document.getElementById('products-grid');
+  if (!products.length) {
+    grid.innerHTML = '<p style="color:var(--secondary);text-align:center;padding:20px">' + emptyMsg + '</p>';
+    return;
+  }
+  Promise.all(products.map(function(f) { return getItemMeta(f, '/products/'); })).then(function(metas) {
+    var placeholders = ['🔧','📸','🖥️','📊','🤖','🔌','📡','🎛️','💻','⚙️','🛠️','🔬'];
+    var allMetas = metas.filter(Boolean);
+
+    var tagMap = {};
+    for (var i = 0; i < allMetas.length; i++) {
+      var t = allMetas[i].tags;
+      if (t) { for (var j = 0; j < t.length; j++) { tagMap[t[j]] = true; } }
+    }
+    var allTags = Object.keys(tagMap).sort();
+
+    var filterBar = document.getElementById('products-tags-filter');
+    var filterHtml = '<span class="tag-item active" data-tag="">全部</span>';
+    for (var i = 0; i < allTags.length; i++) {
+      filterHtml += '<span class="tag-item" data-tag="' + escHtml(allTags[i]) + '">' + escHtml(allTags[i]) + '</span>';
+    }
+    filterBar.innerHTML = filterHtml;
+
+    function renderGrid(filterTag) {
+      var html = '';
+      for (var i = 0; i < allMetas.length; i++) {
+        var m = allMetas[i];
+        if (filterTag && (!m.tags || m.tags.indexOf(filterTag) === -1)) continue;
+        var ph = placeholders[i % placeholders.length];
+        var desc = m.tags && m.tags.length ? m.tags.join(' · ') : '';
+        var tagsHtml = m.tags && m.tags.length ? m.tags.map(function(t) {
+          return '<span>' + escHtml(t) + '</span>';
+        }).join('') : '';
+        html += '<a href="' + m.url + '" class="project-card">' +
+          '<div class="card-img-placeholder">' + ph + '</div>' +
+          '<div class="card-body"><h3>' + escHtml(m.title) + '</h3>' +
+          (desc ? '<p>' + escHtml(desc) + '</p>' : '') +
+          (tagsHtml ? '<div class="card-tags">' + tagsHtml + '</div>' : '') +
+          '</div></a>';
+      }
+      grid.innerHTML = html || '<p style="color:var(--secondary);text-align:center;padding:20px">' + noMatchMsg + '</p>';
+    }
+
+    renderGrid('');
+
+    filterBar.addEventListener('click', function(e) {
+      var el = e.target.closest('.tag-item');
+      if (!el) return;
+      var tag = el.getAttribute('data-tag');
+      var items = filterBar.querySelectorAll('.tag-item');
+      for (var i = 0; i < items.length; i++) {
+        items[i].classList.toggle('active', items[i].getAttribute('data-tag') === tag);
+      }
+      renderGrid(tag);
+    });
+  });
+}
+
+// ========== SPA-style page loading ==========
+
 document.addEventListener('click', function(e) {
   var link = e.target.closest('a');
   if (!link) return;
@@ -686,30 +1071,65 @@ function loadPage(path, container) {
     container.innerHTML = '<div class="page-content">' + parseMarkdown(md) + '<a href="/" class="back-link">← 返回首页</a></div>';
   }
 
+  // Articles listing page - dynamic
+  if (path === '/articles') {
+    var aParams = ((window.__P || {}).pages || {}).articles || {};
+    var aTitle = aParams.title || '📝 文章';
+    var aEmpty = aParams.emptyMsg || '暂无文章。';
+    container.innerHTML = '<div class="page-content"><h1>' + aTitle + '</h1><p style="color:var(--secondary);text-align:center;padding:20px">加载中...</p></div>';
+    fetchArticleList().then(function(articles) {
+      if (!articles.length) {
+        container.innerHTML = '<div class="page-content"><h1>' + aTitle + '</h1><p>' + aEmpty + '</p><a href="/" class="back-link">← 返回首页</a></div>';
+        return;
+      }
+      renderArticlesPage(container, articles);
+    }).catch(function() {
+      container.innerHTML = '<div class="page-content"><h1>' + aTitle + '</h1><p>加载失败。</p><a href="/" class="back-link">← 返回首页</a></div>';
+    });
+    return;
+  }
+
+  // Products listing page - dynamic
+  if (path === '/products') {
+    var pParams = ((window.__P || {}).pages || {}).products || {};
+    var pTitle = pParams.title || '🛒 产品';
+    var pEmpty = pParams.emptyMsg || '暂无产品。';
+    container.innerHTML = '<div class="page-content"><h1>' + pTitle + '</h1><p style="color:var(--secondary);text-align:center;padding:20px">加载中...</p></div>';
+    fetchProductList().then(function(products) {
+      if (!products.length) {
+        container.innerHTML = '<div class="page-content"><h1>' + pTitle + '</h1><p>' + pEmpty + '</p><a href="/" class="back-link">← 返回首页</a></div>';
+        return;
+      }
+      renderProductsPage(container, products);
+    }).catch(function() {
+      container.innerHTML = '<div class="page-content"><h1>' + pTitle + '</h1><p>加载失败。</p><a href="/" class="back-link">← 返回首页</a></div>';
+    });
+    return;
+  }
+
   // Explicit .md file
   if (/\.md$/.test(path)) {
-    fetch(path)
+    fetch(path, { cache: 'no-store' })
       .then(function(res) { if (!res.ok) throw Error(); return res.text(); })
       .then(renderMd).catch(show404);
     return;
   }
 
   var url = /\.html$/.test(path) ? path : path + '.html';
-  fetch(url)
+  fetch(url, { cache: 'no-store' })
     .then(function(res) {
-      if (!res.ok) {
-        // Try .md fallback if no explicit extension
-        if (!/\.html$/.test(path)) {
-          return fetch(path + '.md').then(function(r) {
-            if (!r.ok) throw Error();
-            return r.text().then(renderMd);
-          });
-        }
-        throw Error();
-      }
+      if (!res.ok) throw Error();
       return res.text().then(function(html) { container.innerHTML = html; });
     })
-    .catch(show404);
+    .catch(function() {
+      if (/\.md$/.test(path)) return; // Already tried .md above implicitly
+      fetch(path + '.md', { cache: 'no-store' })
+        .then(function(r) {
+          if (!r.ok) { show404(); return; }
+          return r.text().then(renderMd);
+        })
+        .catch(show404);
+    });
 }
 
 // Handle browser back/forward
@@ -727,6 +1147,32 @@ window.addEventListener('popstate', function(e) {
     }
   }
 });
+
+// Init: route to current URL on page load / refresh
+(function initRoute() {
+  var path = window.location.pathname.replace(/\/$/, '');
+  if (!path || path === '/index.html') path = '/';
+
+  // Highlight nav
+  document.querySelectorAll('#menu a').forEach(function(a) {
+    a.classList.toggle('active', a.getAttribute('href') === path);
+  });
+
+  // Load home articles
+  fetchArticleList().then(function(articles) {
+    var maxCount = (((window.__P || {}).pages || {}).home || {}).maxArticles || 6;
+    renderHomeArticleList(articles.slice(0, maxCount));
+  }).catch(function() {
+    var c = document.getElementById('home-articles');
+    if (c) c.innerHTML = '<p style="color:var(--secondary);text-align:center;padding:20px">加载失败</p>';
+  });
+
+  // If not home page, load the requested page
+  if (path !== '/') {
+    var main = document.querySelector('.main');
+    loadPage(path, main);
+  }
+})();
 </script>
 </body>
 </html>
