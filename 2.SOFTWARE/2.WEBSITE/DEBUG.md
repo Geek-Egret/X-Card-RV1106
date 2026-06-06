@@ -311,3 +311,155 @@ ssh root@192.168.1.9 'ls -laR /usr/html/'
 ```bash
 ssh root@192.168.1.9 'cat /var/log/nginx/error.log'
 ```
+
+---
+
+## 10. Markdown 表格解析修复
+
+**日期**: 2026-06-06
+
+### 现象
+
+Markdown 文件中的多列表格（如 `| H1 | H2 | H3 |`）无法正确渲染，表格分隔行被当作普通文本显示。此外，`.md` 文件在浏览器中被当作二进制文件下载而非直接显示，中文 JSON 文件出现乱码。
+
+### 根因
+
+1. 多列分隔符正则 `/^\|[\s\-:]+\|$/` 只匹配单列分隔符 `|---|`，多列分隔符 `|---|---|` 中包含的 `|` 不在字符类中，导致匹配失败
+2. `splitCells()` 函数直接按 `|` 字符拆分单元格，未保护行内代码 `` `...` `` 和转义管道 `\|` 中的 `|`
+3. Nginx 未配置 `.md` 文件的 MIME 类型，默认返回 `application/octet-stream` 触发浏览器下载
+4. 未设置 `charset utf-8`，导致 JSON 和 Markdown 中文乱码
+
+### 修复
+
+- 正则改为 `/^\|[\s\-:\|]+\|$/`，在字符类中加入 `\|`
+- `splitCells()` 增加占位符保护机制：先用临时标记替换行内代码和转义管道，`split('|')` 拆分单元格后再还原
+- Nginx `http` 块添加 `charset utf-8;` 全局编码声明
+- Nginx `http` 块添加 `text/markdown md;` MIME 类型
+
+### 相关文件
+
+- `index.html`: Markdown 解析器正则 + `splitCells()` 函数
+- 板卡: `/etc/nginx/nginx.conf`
+
+---
+
+## 11. param.json 注释剥离导致 JSON 解析失败
+
+**日期**: 2026-06-06
+
+### 现象
+
+网站加载后 `window.__P` 为 `null`，所有 param.json 配置失效，回退到 HTML 默认值。浏览器控制台显示 JSON 解析错误。
+
+### 根因
+
+JS loader 使用 `replace(/\/\/.*$/gm, '')` 试图剥离 JSON 中的注释，但该正则错误匹配了 URL 中的 `://` 前缀（如 `https://github.com/...`），将 URL 后半部分截断，导致 JSON 格式损坏、`r.json()` 抛出异常。
+
+### 修复
+
+移除注释剥离逻辑。`param.json` 本身就是标准 JSON（无注释），直接使用 `r.json()` 解析即可。
+
+### 相关文件
+
+- `index.html`: param.json 加载脚本（删除 `replace(/\/\/.*$/gm, '')` 行）
+
+---
+
+## 12. loadPage 函数重复代码 + 括号失衡
+
+**日期**: 2026-06-06
+
+### 现象
+
+所有非首页路由（`/articles`、`/products`、`/about`、`/contact`）均显示首页内容，导航完全失效。浏览器控制台报 JS 语法错误。
+
+### 根因
+
+重写 `loadPage` 函数时，旧代码尾部（约 65 行）未完全删除，留下了重复的事件处理器定义和一个多余的 `}` 大括号。多余括号导致整个脚本块括号失衡，JS 引擎无法解析该 `<script>` 块，后续 SPA 路由器未定义，所有 `fetch()` 调用失败、路由逻辑被跳过。
+
+### 修复
+
+- 删除残留的重复代码块
+- 验证所有 3 个 `<script>` 块括号平衡：17/17、29/29、155/155
+
+### 相关文件
+
+- `index.html`: 第 2、3 个 `<script>` 块
+
+---
+
+## 13. .md 内容页刷新丢失 SPA 布局
+
+**日期**: 2026-06-06
+
+### 现象
+
+在 `/articles/xxx` 页面刷新浏览器时，显示 `index.html` 的完整 SPA 首页布局而非文章内容。直接访问 `.md` 文件 URL 返回 200 但内容为首页 HTML。
+
+### 根因
+
+1. Nginx `try_files $uri /index.html;` 对所有未知路由返回 `index.html`（状态码 200）。当 `loadPage()` 请求一个不存在的 `xxx.html` 时，收到的是 `index.html` 的 HTML 内容（以 `<!DOCTYPE` 或 `<html` 开头），而非 404，导致 JS 误以为加载成功
+2. 文章详情页 URL 中包含 `.md` 扩展名（如 `/articles/welcome.md`），不够简洁
+
+### 修复
+
+- 新增 `isIndexHtml()` 检查：如果 fetch 响应文本以 `<!DOCTYPE` 或 `<html` 开头，视为 404，回退尝试 `.md` 文件
+- `.md` URL 在路由前通过 `replaceState` 去除扩展名，使文章链接显示为 `/articles/welcome`
+- 新增 `META_CACHE_VER = 'v2'` 缓存前缀，使旧版缓存的 meta URL 失效
+
+### 相关文件
+
+- `index.html`: `loadPage()` 函数 + `META_CACHE_VER`
+
+---
+
+## 14. 星空背景粒子优化 + Tag 筛选 + 其它
+
+**日期**: 2026-06-06
+
+### 修改
+
+- **粒子 Canvas 响应式**：窗口 resize 时按比例缩放已有粒子坐标，并自动增减粒子数维持密度
+- **Tag 筛选栏**：`/articles` 和 `/products` 页面新增标签过滤条，从所有条目中提取唯一标签，点击筛选，默认"全部"。新增 `.tag-item.active` CSS 高亮样式
+- **移除 RSS 图标**：从社交图标区、`param.json` social 对象和 JS keys 数组中移除 RSS 链接
+- **新建 `edit_param.py`**：交互式 Python 配置编辑器，逐项展示参数用途和当前值，支持类型校验，修改后自动备份 `.bak` 文件
+
+### 相关文件
+
+- `index.html`: 粒子系统 + tag 筛选 UI + CSS + 社交图标逻辑
+
+---
+
+## 15. 关于页/联系页内容硬编码 + Email 解析 + 导航栏高亮
+
+**日期**: 2026-06-06
+
+### 现象
+
+1. 联系页的 GitHub、Email 链接是硬编码的旧值，与 `param.json` 的 `social` 不同步
+2. 点击首页邮箱图标跳转到 `http://192.168.1.9/18750211657@163.com`（缺少 `mailto:` 前缀）
+3. 非首页刷新后导航栏始终高亮"首页"
+
+### 根因
+
+1. **联系页/关于页**：内容从 `contactPage.content` / `aboutPage.content` 静态 HTML 渲染，与 `social` 字段独立
+2. **Email**：`param.json` 的 `email` 值缺少 `mailto:` 前缀，浏览器按相对路径解析
+3. **param 加载时序**：`fetch(param.json)` 异步，`initRoute()` 同步执行时 `window.__P` 为 `null`，导致 `loadPage` 无法读取参数
+4. **导航高亮**：param loader 生成导航 HTML 时硬编码 `class="active"` 在首页链接上，覆盖了 `initRoute` 的正确高亮
+
+### 修复
+
+1. 联系页/关于页改为从 `social` 动态生成链接：
+   - `social.github` → 自动提取用户名显示 `@Geek-Egret`
+   - `social.email` → 自动去掉 `mailto:` 前缀显示，链接保留完整 `mailto:`
+   - `contactPage.content` / `aboutPage.content` 为空时走动态生成，填入自定义 HTML 时优先使用
+2. `param.json` 的 `email` 补上 `mailto:` 前缀
+3. 新增 `window.__P_ready` Promise：param 加载完成（成功或失败）后 resolve，`initRoute` 等待 Promise 再调用 `loadPage`
+4. param loader 生成导航后根据当前 URL 重新设置高亮；`initRoute` 在 `__P_ready` resolve 后再次确认高亮
+
+### 相关文件
+
+- `index.html`: 联系页/关于页处理器 + `__P_ready` + 导航高亮逻辑
+- `param.json`: `social.email` 修复 `mailto:` 前缀，`contactPage.content` / `aboutPage.content` 清空走动态生成
+- `param.json`: 移除 `social.rss`
+- `edit_param.py`: 新建（164 行）

@@ -8,11 +8,26 @@
     "robots": "index, follow"
   },
   "nav": [
-    { "label": "首页", "href": "/" },
-    { "label": "产品", "href": "/products" },
-    { "label": "文章", "href": "/articles" },
-    { "label": "关于", "href": "/about" },
-    { "label": "联系", "href": "/contact" }
+    {
+      "label": "首页",
+      "href": "/"
+    },
+    {
+      "label": "产品",
+      "href": "/products"
+    },
+    {
+      "label": "文章",
+      "href": "/articles"
+    },
+    {
+      "label": "关于",
+      "href": "/about"
+    },
+    {
+      "label": "联系",
+      "href": "/contact"
+    }
   ],
   "profile": {
     "avatar": "assets/avatar.png",
@@ -21,11 +36,10 @@
     "tagline": "拥抱开源，回馈开源。"
   },
   "social": {
-    "github": "https://github.com/geekegret",
-    "bilibili": "https://space.bilibili.com/geekegret",
+    "github": "https://github.com/Geek-Egret",
+    "bilibili": "https://space.bilibili.com/428067141",
     "taobao": "https://shop.m.taobao.com/shop/geekegret",
-    "email": "geekegret@example.com",
-    "rss": "/rss.xml"
+    "email": "mailto:18750211657@163.com"
   },
   "pages": {
     "home": {
@@ -34,24 +48,24 @@
     },
     "articles": {
       "title": "📝 文章",
-      "subtitle": "geekegret 工作室的技术分享与思考。",
+      "subtitle": "GeekEgret工作室的技术分享与思考。",
       "emptyMsg": "暂无文章",
       "noMatchMsg": "无匹配文章"
     },
     "products": {
       "title": "🛒 产品",
-      "subtitle": "geekegret 工作室推出的硬件与软件产品。",
+      "subtitle": "GeekEgret工作室推出的硬件与软件产品。",
       "emptyMsg": "暂无产品",
       "noMatchMsg": "无匹配产品"
     }
   },
   "aboutPage": {
     "title": "🙋 关于",
-    "content": ""
+    "content": "<p>geekegret 工作室致力于嵌入式 Linux 与 AIoT 领域的探索与实践。</p><p>我们基于 <strong>Rockchip RV1106</strong> 平台，研究边缘计算、智能视觉、轻量 Web 服务等技术方向。</p><h2>技术栈</h2><ul><li><strong>硬件平台：</strong>Rockchip RV1106G</li><li><strong>操作系统：</strong>Linux 5.10.160 (armv7l)</li><li><strong>Web 服务：</strong>Nginx</li><li><strong>脚本语言：</strong>Python 3.11</li><li><strong>工具链：</strong>BusyBox 1.36.1</li></ul><h2>联系方式</h2><ul><li>GitHub: <a href=\"https://github.com/geekegret\" target=\"_blank\">@geekegret</a></li><li>Email: geekegret@example.com</li></ul>"
   },
   "contactPage": {
     "title": "📬 联系",
-    "content": ""
+    "content": "<p>欢迎通过以下方式与我们取得联系：</p>\n<ul>\n  <li><strong>GitHub:</strong> <a href=\"https://github.com/Geek-Egret\" target=\"_blank\">@Geek-Egret</a></li>\n  <li><strong>Email:</strong> <a href=\"mailto:18750211657@163.com\">18750211657@163.com</a></li>\n</ul>\n<p>或在本站提交 Issue / PR 参与讨论。</p>"
   },
   "footer": {
     "poweredBy": "Powered by <a href=\"https://nginx.org/\" target=\"_blank\">Nginx</a> on <a href=\"https://www.rock-chips.com/\" target=\"_blank\">Rockchip RV1106</a>"
@@ -59,8 +73,8 @@
   "particles": {
     "enabled": true,
     "blur": 1.5,
-    "densityDivisor": 2200,
-    "maxStars": 500
+    "densityDivisor": 2000,
+    "maxStars": 600
   },
   "splash": {
     "enabled": true,

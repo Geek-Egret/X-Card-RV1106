@@ -19,6 +19,7 @@
 ├── assets/
 │   ├── logo.png                    # 网站 Logo
 │   └── avatar.png                  # 头像
+├── edit_param.py                    # param.json 交互式配置编辑器
 ├── articles/                       # 文章详情（自动发现，无需手动引用）
 │   └── welcome.md                  # Markdown 文章示例
 └── products/                       # 产品详情（自动发现，无需手动引用）
@@ -52,8 +53,7 @@
 | **social** | `github` | `https://github.com/...` | GitHub 链接 |
 | | `bilibili` | `https://space.bilibili...` | B站链接 |
 | | `taobao` | `https://shop.m.taobao...` | 淘宝链接 |
-| | `email` | `geekegret@example.com` | 邮箱 |
-| | `rss` | `/rss.xml` | RSS 地址 |
+| | `email` | `geekegret@example.com` | 邮箱（需含 `mailto:` 前缀） |
 | **pages.home** | `sectionTitle` | `📝 最新动态` | 首页文章区标题 |
 | | `maxArticles` | `6` | 首页最多显示文章数 |
 | **pages.articles** | `title` | `📝 文章` | 文章页标题 |
@@ -100,7 +100,26 @@
 ]
 ```
 
-### 2.3 生效方式
+### 2.3 交互式编辑器（edit_param.py）
+
+提供了 Python 交互式脚本 `edit_param.py`，逐项展示每个参数的用途和当前值，可选择修改或跳过。修改后自动生成 `.bak` 备份，支持类型校验。
+
+```bash
+cd 2.SOFTWARE/2.WEBSITE
+python3 edit_param.py
+```
+
+运行示例：
+```
+[meta.title]
+  用途: 浏览器标题 & Logo 文字
+  当前: "Leeeezy's Studio"
+  新值: [输入新值回车 / 直接回车跳过 / q 退出保存]
+```
+
+> 注：导航栏 (`nav`) 为数组格式，建议直接编辑 JSON 文件或通过 param.json 手动修改。
+
+### 2.4 生效方式
 
 1. 修改本地 `param.json`
 2. scp 到板卡：`sshpass -p 'geekegret' scp param.json root@192.168.1.9:/usr/html/`
@@ -191,6 +210,9 @@ ssh root@192.168.1.9 'chmod 644 /usr/html/articles/* /usr/html/products/*'
 
 关键配置：
 ```nginx
+charset utf-8;
+types { text/markdown md; }
+
 server {
     listen 80;
     location / {
@@ -210,6 +232,8 @@ server {
     }
 }
 ```
+
+> `charset utf-8;` 确保 JSON 和 Markdown 中文正确编码；`text/markdown md;` 使 `.md` 文件在浏览器中直接展示而非下载。
 
 ---
 
@@ -237,7 +261,7 @@ server {
 | `- 项目` `* 项目` | 无序列表 |
 | `1. 项目` | 有序列表 |
 | `> 引用` | 引用块 |
-| `\| 列1 \| 列2 \|` | 表格 |
+| `\| 列1 \| 列2 \| 列3 \|` | 表格（支持多列、带对齐分隔符） |
 | `---` | 分割线 |
 
 ### 元数据行
@@ -267,8 +291,33 @@ tags: RV1106, 教程, 嵌入式
 ### Q: 刷新非首页 403？
 Nginx 已配置 `try_files $uri /index.html;`，确认配置已生效。
 
+### Q: 表格渲染不正确？
+多列表格分隔符已修复（v2026-06-06+），确认使用的是最新版 `index.html`。若 `.md` 文件被浏览器下载而非显示，检查 Nginx 是否配置了 `text/markdown md;` MIME 类型。
+
+### Q: param.json 修改后网站回退到默认值？
+1. 确认 JSON 格式正确（无注释、引号配对）：`python3 -c "import json; json.load(open('param.json'))"`
+2. 不要使用 `//` 注释，param.json 必须为纯 JSON
+3. 部署后修复权限：`chmod 644 /usr/html/param.json`
+
+### Q: 非首页路由显示首页内容？
+检查浏览器控制台是否有 JS 语法错误。确认 `index.html` 中 `<script>` 块括号平衡。
+
+### Q: .md 详情页刷新后显示首页？
+确认 Nginx `try_files` 配置正确，且 `index.html` 中 `loadPage()` 含 `isIndexHtml()` 检查。
+
+### Q: 修改 social 后联系页/关于页链接没变？
+联系页和关于页从 `social` 字段动态生成链接。如果 `contactPage.content` 或 `aboutPage.content` 非空，则优先使用自定义 HTML（此时 `social` 变更不会自动反映）。清空这两个 content 字段即可切回动态生成。
+
+### Q: 点击邮箱图标跳转错误？
+`social.email` 必须包含 `mailto:` 前缀，如 `"mailto:geekegret@example.com"`，否则浏览器会将其当作相对路径。
+
+### Q: 刷新非首页后导航栏高亮错误？
+导航栏由 `param.json` 异步加载。页面加载时会先显示默认高亮，param 加载完成后会自动修正为当前页面。
+
 ### Q: 如何本地预览？
 ```bash
 cd 2.SOFTWARE/2.WEBSITE
 python3 -m http.server 8080
 ```
+
+> 本地预览与板卡行为有差异：本地无 Nginx autoindex JSON 目录，文章/产品列表无法自动发现。建议在板卡上测试完整功能。

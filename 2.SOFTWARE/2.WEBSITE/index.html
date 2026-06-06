@@ -313,14 +313,11 @@ a:hover { color: #1a73e8; text-decoration: underline; }
 <script>
 // ====== Load & apply param.json ======
 window.__P = null;
-(function() {
+window.__P_ready = new Promise(function(resolve) {
   var url = '/param.json?t=' + Date.now();
   fetch(url)
-    .then(function(r) { if (!r.ok) throw Error('no param.json'); return r.text(); })
-    .then(function(raw) {
-      // Strip JSON comments (// and /* */) before parsing
-      var clean = raw.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
-      var p = JSON.parse(clean);
+    .then(function(r) { if (!r.ok) throw Error('no param.json'); return r.json(); })
+    .then(function(p) {
       window.__P = p;
       // Meta
       if (p.meta) {
@@ -345,9 +342,15 @@ window.__P = null;
           var navHtml = '';
           for (var i = 0; i < p.nav.length; i++) {
             var item = p.nav[i];
-            navHtml += '<li><a href="' + item.href + '"' + (item.href === '/' ? ' class="active"' : '') + ' title="' + item.label + '"><span>' + item.label + '</span></a></li>';
+            navHtml += '<li><a href="' + item.href + '" title="' + item.label + '"><span>' + item.label + '</span></a></li>';
           }
           menu.innerHTML = navHtml;
+          // Re-highlight current page
+          var curPath = window.location.pathname.replace(/\/$/, '') || '/';
+          if (curPath === '/index.html') curPath = '/';
+          document.querySelectorAll('#menu a').forEach(function(a) {
+            a.classList.toggle('active', a.getAttribute('href') === curPath);
+          });
         }
       }
       // Profile
@@ -362,7 +365,7 @@ window.__P = null;
       // Social links
       if (p.social) {
         var icons = document.querySelectorAll('.social-icons a');
-        var keys = ['github', 'bilibili', 'taobao', 'email', 'rss'];
+        var keys = ['github', 'bilibili', 'taobao', 'email'];
         for (var i = 0; i < icons.length && i < keys.length; i++) {
           if (p.social[keys[i]]) icons[i].setAttribute('href', p.social[keys[i]]);
         }
@@ -377,11 +380,13 @@ window.__P = null;
         var st = document.querySelector('.posts-section h2');
         if (st) st.textContent = p.pages.home.sectionTitle;
       }
+      resolve();
     })
     .catch(function() {
       window.__P = null;
+      resolve();
     });
-})();
+});
 </script>
 <div id="splash"><img src="assets/logo.png" alt="geekegret"></div>
 <header class="header">
@@ -417,9 +422,6 @@ window.__P = null;
         </a>
         <a href="mailto:geekegret@example.com" target="_blank" rel="noopener noreferrer me" title="Email">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 4L12 13 2 4"/></svg>
-        </a>
-        <a href="/rss.xml" target="_blank" rel="noopener noreferrer me" title="RSS">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11a9 9 0 019 9"/><path d="M4 4a16 16 0 0116 16"/><circle cx="5" cy="19" r="1"/></svg>
         </a>
       </div>
     </div>
@@ -716,17 +718,34 @@ function parseMarkdown(md) {
       i++; continue;
     }
 
-    // Table
+    // Table (protects inline code from | splitting)
     if (/^\|.+\|$/.test(t)) {
       closeList();
-      var isHeader = i + 1 < lines.length && /^\|[\s\-:]+\|$/.test(lines[i + 1].trim());
+      var isHeader = i + 1 < lines.length && /^\|[\s\-:\|]+\|$/.test(lines[i + 1].trim());
       if (isHeader) {
-        var cols = t.split('|').filter(function(c) { return c.trim(); });
-        out.push('<table><thead><tr>' + cols.map(function(c) { return '<th>' + inline(c.trim()) + '</th>'; }).join('') + '</tr></thead><tbody>');
+        function splitCells(line) {
+          var placeholders = [];
+          var safe = line.replace(/`([^`]+)`/g, function(m, c) {
+            placeholders.push('`' + c + '`');
+            return '\x00' + (placeholders.length - 1) + '\x00';
+          });
+          safe = safe.replace(/\\\|/g, function() {
+            placeholders.push('|');
+            return '\x00' + (placeholders.length - 1) + '\x00';
+          });
+          var cells = safe.split('|').filter(function(c) { return c.trim(); });
+          return cells.map(function(c) {
+            return c.trim().replace(/\x00(\d+)\x00/g, function(_, n) {
+              return placeholders[parseInt(n)];
+            });
+          });
+        }
+        var cols = splitCells(t);
+        out.push('<table><thead><tr>' + cols.map(function(c) { return '<th>' + inline(c) + '</th>'; }).join('') + '</tr></thead><tbody>');
         i += 2;
         while (i < lines.length && /^\|.+\|$/.test(lines[i].trim())) {
-          var row = lines[i].trim().split('|').filter(function(c) { return c.trim(); });
-          out.push('<tr>' + row.map(function(c) { return '<td>' + inline(c.trim()) + '</td>'; }).join('') + '</tr>');
+          var cells = splitCells(lines[i].trim());
+          out.push('<tr>' + cells.map(function(c) { return '<td>' + inline(c) + '</td>'; }).join('') + '</tr>');
           i++;
         }
         out.push('</tbody></table>');
@@ -746,6 +765,7 @@ function parseMarkdown(md) {
 // ========== Dynamic article system ==========
 
 var articleMetaCache = {};
+var META_CACHE_VER = 'v2';
 
 function escHtml(s) {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -809,7 +829,7 @@ function formatDate(dateStr) {
 
 function getItemMeta(file, basePath) {
   basePath = basePath || '/articles/';
-  var cacheKey = basePath + file.name + '@' + file.mtime;
+  var cacheKey = META_CACHE_VER + ':' + basePath + file.name + '@' + file.mtime;
   if (articleMetaCache[cacheKey]) return Promise.resolve(articleMetaCache[cacheKey]);
 
   var url = basePath + file.name;
@@ -831,7 +851,7 @@ function getItemMeta(file, basePath) {
       var date = formatDate(file.mtime);
       var meta = {
         name: file.name,
-        url: url,
+        url: basePath + file.name.replace(/\.(md|html?)$/i, ''),
         title: title,
         tags: tags,
         date: date,
@@ -1071,6 +1091,10 @@ function loadPage(path, container) {
     container.innerHTML = '<div class="page-content">' + parseMarkdown(md) + '<a href="/" class="back-link">← 返回首页</a></div>';
   }
 
+  function isIndexHtml(text) {
+    return /^\s*<!DOCTYPE\s|<html/i.test(text.trim());
+  }
+
   // Articles listing page - dynamic
   if (path === '/articles') {
     var aParams = ((window.__P || {}).pages || {}).articles || {};
@@ -1107,29 +1131,77 @@ function loadPage(path, container) {
     return;
   }
 
-  // Explicit .md file
-  if (/\.md$/.test(path)) {
-    fetch(path, { cache: 'no-store' })
-      .then(function(res) { if (!res.ok) throw Error(); return res.text(); })
-      .then(renderMd).catch(show404);
+  // About page - dynamic from param.json
+  if (path === '/about') {
+    var ab = ((window.__P || {}).aboutPage) || {};
+    var abTitle = ab.title || '🙋 关于';
+    var s = (window.__P || {}).social || {};
+    var html = '<div class="page-content"><h1>' + abTitle + '</h1>';
+    if (ab.content) {
+      html += ab.content;
+    } else {
+      html += '<p>geekegret 工作室致力于嵌入式 Linux 与 AIoT 领域的探索与实践。</p>';
+      html += '<p>我们基于 <strong>Rockchip RV1106</strong> 平台，研究边缘计算、智能视觉、轻量 Web 服务等技术方向。</p>';
+      html += '<h2>联系方式</h2><ul>';
+      if (s.github) html += '<li>GitHub: <a href="' + s.github + '" target="_blank">@' + escHtml(s.github.replace(/^https?:\/\/github\.com\//, '').replace(/\/$/, '')) + '</a></li>';
+      if (s.email) html += '<li>Email: ' + escHtml(s.email.replace(/^mailto:/, '')) + '</li>';
+      html += '</ul>';
+    }
+    html += '<a href="/" class="back-link">← 返回首页</a></div>';
+    container.innerHTML = html;
     return;
+  }
+
+  // Contact page - dynamic from param.json
+  if (path === '/contact') {
+    var ct = ((window.__P || {}).contactPage) || {};
+    var ctTitle = ct.title || '📬 联系';
+    var s = (window.__P || {}).social || {};
+    var githubUser = (s.github || '').replace(/^https?:\/\/github\.com\//, '').replace(/\/$/, '');
+    var html = '<div class="page-content"><h1>' + ctTitle + '</h1>';
+    if (ct.content) {
+      html += ct.content;
+    } else {
+      html += '<p>欢迎通过以下方式与我们取得联系：</p><ul>';
+      if (s.github) html += '<li><strong>GitHub:</strong> <a href="' + s.github + '" target="_blank">@' + escHtml(githubUser) + '</a></li>';
+      if (s.email) html += '<li><strong>Email:</strong> <a href="' + s.email + '">' + escHtml(s.email.replace(/^mailto:/, '')) + '</a></li>';
+      html += '</ul><p>或在本站提交 Issue / PR 参与讨论。</p>';
+    }
+    html += '<a href="/" class="back-link">← 返回首页</a></div>';
+    container.innerHTML = html;
+    return;
+  }
+
+  // Explicit .md file — strip extension and re-route via SPA
+  if (/\.md$/.test(path)) {
+    var cleanPath = path.replace(/\.md$/, '');
+    window.history.replaceState({page:cleanPath}, '', cleanPath);
+    loadPage(cleanPath, container);
+    return;
+  }
+
+  // Try .md first, then .html
+  function tryMd(cb) {
+    fetch(path + '.md', { cache: 'no-store' })
+      .then(function(r) { if (!r.ok) throw Error(); return r.text(); })
+      .then(function(text) {
+        if (isIndexHtml(text)) throw Error();
+        renderMd(text);
+        if (cb) cb();
+      })
+      .catch(function() { if (cb) cb(); });
   }
 
   var url = /\.html$/.test(path) ? path : path + '.html';
   fetch(url, { cache: 'no-store' })
     .then(function(res) {
       if (!res.ok) throw Error();
-      return res.text().then(function(html) { container.innerHTML = html; });
+      return res.text().then(function(html) {
+        if (isIndexHtml(html)) { tryMd(); return; }
+        container.innerHTML = html;
+      });
     })
-    .catch(function() {
-      if (/\.md$/.test(path)) return; // Already tried .md above implicitly
-      fetch(path + '.md', { cache: 'no-store' })
-        .then(function(r) {
-          if (!r.ok) { show404(); return; }
-          return r.text().then(renderMd);
-        })
-        .catch(show404);
-    });
+    .catch(function() { tryMd(show404); });
 }
 
 // Handle browser back/forward
@@ -1167,10 +1239,16 @@ window.addEventListener('popstate', function(e) {
     if (c) c.innerHTML = '<p style="color:var(--secondary);text-align:center;padding:20px">加载失败</p>';
   });
 
-  // If not home page, load the requested page
+  // If not home page, load the requested page after params are ready
   if (path !== '/') {
     var main = document.querySelector('.main');
-    loadPage(path, main);
+    (window.__P_ready || Promise.resolve()).then(function() {
+      // Re-highlight in case nav was rebuilt by param loader
+      document.querySelectorAll('#menu a').forEach(function(a) {
+        a.classList.toggle('active', a.getAttribute('href') === path);
+      });
+      loadPage(path, main);
+    });
   }
 })();
 </script>
