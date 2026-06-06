@@ -502,113 +502,199 @@ window.__P_ready = new Promise(function(resolve) {
     var canvas = document.createElement('canvas');
     canvas.id = 'particles';
     var blurPx = pp.blur != null ? pp.blur : 1.5;
+    var l1 = pp.bgLayer1 || 'rgba(80,20,80,0.35)';
+    var l2 = pp.bgLayer2 || 'rgba(20,20,60,0.3)';
+    var l3 = pp.bgLayer3 || 'rgba(30,10,50,0.25)';
+    var core = pp.coreColor || '#050510';
     canvas.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;z-index:-1;pointer-events:none;filter:blur(' + blurPx + 'px)';
-    canvas.style.background = 'radial-gradient(ellipse at 30% 40%, rgba(20,30,80,0.3) 0%, transparent 60%), radial-gradient(ellipse at 70% 60%, rgba(15,10,40,0.25) 0%, transparent 50%)';
+    canvas.style.background = 'radial-gradient(ellipse at 50% 55%, ' + l1 + ' 0%, transparent 50%), radial-gradient(ellipse at 45% 50%, ' + l2 + ' 0%, transparent 45%), radial-gradient(ellipse at 55% 45%, ' + l3 + ' 0%, transparent 40%), linear-gradient(135deg, rgba(15,5,40,0.5) 0%, ' + core + ' 50%, rgba(10,5,30,0.5) 100%)';
     document.body.insertBefore(canvas, document.body.firstChild);
     var ctx = canvas.getContext('2d');
     var stars = [];
+    var nebulae = [];
     var w, h, time = 0;
     var density = pp.densityDivisor || 2200;
     var maxStars = pp.maxStars || 500;
+    var galCX = pp.centerX != null ? pp.centerX : 0.48;
+    var galCY = pp.centerY != null ? pp.centerY : 0.52;
+    var rotSpeed = pp.rotationSpeed != null ? pp.rotationSpeed : 0.00008;
+    var arms = pp.arms || 3;
+    var centerX, centerY;
+
+    function galaxyDist(x, y) {
+      // Simulate spiral arm: return distance from nearest arm
+      var dx = x - centerX;
+      var dy = y - centerY;
+      var dist = Math.sqrt(dx * dx + dy * dy);
+      var angle = Math.atan2(dy, dx);
+      var armPhase = Math.sin((angle - dist * 0.001) * arms) * 0.5 + 0.5;
+      return { dist: dist, armPhase: armPhase, dx: dx, dy: dy };
+    }
+
+    function starColor(rnd) {
+      if (rnd < 0.35) return [180, 200, 255]; // blue-white (young stars)
+      if (rnd < 0.65) return [255, 250, 240]; // warm white (main sequence)
+      if (rnd < 0.80) return [255, 200, 180]; // orange-gold
+      if (rnd < 0.92) return [200, 160, 220]; // purple-pink
+      return [255, 230, 200]; // cream
+    }
 
     function createStar() {
       var rnd = Math.random();
-      var s = { x: Math.random() * w, y: Math.random() * h, phase: Math.random() * Math.PI * 2 };
-      if (rnd < 0.7) {
-        // Tiny dim stars
-        s.r = Math.random() * 0.7 + 0.2;
-        s.baseAlpha = Math.random() * 0.18 + 0.04;
-        s.vx = (Math.random() - 0.5) * 0.06;
-        s.vy = Math.random() * 0.04 + 0.01;
-        s.twinkle = Math.random() * 0.4 + 0.3;
-        s.color = [255, 255, 255];
-      } else if (rnd < 0.92) {
-        // Medium stars with subtle color
-        s.r = Math.random() * 1 + 0.4;
-        s.baseAlpha = Math.random() * 0.3 + 0.2;
-        s.vx = (Math.random() - 0.5) * 0.1;
-        s.vy = Math.random() * 0.07 + 0.02;
-        s.twinkle = Math.random() * 0.7 + 0.5;
-        var tint = Math.random();
-        if (tint < 0.65) s.color = [255, 250, 245];
-        else if (tint < 0.82) s.color = [210, 225, 255];
-        else if (tint < 0.94) s.color = [200, 210, 255];
-        else s.color = [255, 220, 180];
-      } else {
-        // Bright glowing stars
-        s.r = Math.random() * 1.8 + 1;
-        s.baseAlpha = Math.random() * 0.25 + 0.5;
+      var s = { phase: Math.random() * Math.PI * 2, color: starColor(Math.random()) };
+
+      // Galaxy distribution: higher density near center and in arms
+      var attempts = 0;
+      do {
+        var rr = Math.pow(Math.random(), 1.5) * Math.max(w, h) * 0.8;
+        var ang = Math.random() * Math.PI * 2;
+        s.x = centerX + Math.cos(ang) * rr;
+        s.y = centerY + Math.sin(ang) * rr * 0.55; // flatten to elliptical
+        var gd = galaxyDist(s.x, s.y);
+        attempts++;
+        // Accept if near arm or center, or random chance
+      } while (attempts < 5 && Math.random() > gd.armPhase * 0.8 + 0.2);
+
+      var gd = galaxyDist(s.x, s.y);
+      var distNorm = gd.dist / Math.max(w, h);
+
+      if (rnd < 0.60 || distNorm < 0.2) {
+        // Tiny stars (dense in core/arms)
+        s.r = Math.random() * 0.6 + 0.15;
+        s.baseAlpha = Math.random() * 0.15 + 0.03 + gd.armPhase * 0.08;
+        s.twinkle = Math.random() * 0.5 + 0.2;
+        s.vx = (Math.random() - 0.5) * 0.04;
+        s.vy = Math.random() * 0.03 + 0.005;
+      } else if (rnd < 0.88) {
+        // Medium stars
+        s.r = Math.random() * 0.9 + 0.3;
+        s.baseAlpha = Math.random() * 0.25 + 0.15;
+        s.twinkle = Math.random() * 0.8 + 0.4;
         s.vx = (Math.random() - 0.5) * 0.08;
         s.vy = Math.random() * 0.05 + 0.01;
-        s.twinkle = Math.random() * 1 + 0.8;
-        s.color = [255, 252, 248];
+      } else {
+        // Bright stars
+        s.r = Math.random() * 1.5 + 0.8;
+        s.baseAlpha = Math.random() * 0.2 + 0.4;
+        s.twinkle = Math.random() * 1.2 + 0.6;
+        s.vx = (Math.random() - 0.5) * 0.06;
+        s.vy = Math.random() * 0.04 + 0.01;
         s.glow = true;
       }
+      // Clamp to canvas
+      s.x = Math.max(0, Math.min(s.x, w));
+      s.y = Math.max(0, Math.min(s.y, h));
       return s;
+    }
+
+    function createNebula() {
+      return {
+        x: centerX + (Math.random() - 0.5) * w * 1.2,
+        y: centerY + (Math.random() - 0.5) * h * 1.2,
+        r: Math.random() * 120 + 40,
+        alpha: Math.random() * 0.06 + 0.02,
+        color: [
+          [80, 30, 100], [40, 20, 80], [60, 20, 70],
+          [30, 25, 70], [50, 15, 60], [70, 30, 90]
+        ][Math.floor(Math.random() * 6)],
+        vx: (Math.random() - 0.5) * 0.03,
+        vy: (Math.random() - 0.5) * 0.03
+      };
     }
 
     function resize() {
       var oldW = w, oldH = h;
       w = canvas.width = window.innerWidth;
       h = canvas.height = window.innerHeight;
+      centerX = w * galCX;
+      centerY = h * galCY;
       if (oldW && oldH) {
         var sx = w / oldW, sy = h / oldH;
         for (var i = 0; i < stars.length; i++) {
           stars[i].x = Math.min(Math.max(stars[i].x * sx, 0), w);
           stars[i].y = Math.min(Math.max(stars[i].y * sy, 0), h);
         }
+        for (var i = 0; i < nebulae.length; i++) {
+          nebulae[i].x = Math.min(Math.max(nebulae[i].x * sx, 0), w);
+          nebulae[i].y = Math.min(Math.max(nebulae[i].y * sy, 0), h);
+          nebulae[i].r *= Math.sqrt(sx * sy);
+        }
       }
-      var target = Math.min(maxStars, Math.floor((w * h) / density));
-      while (stars.length < target) stars.push(createStar());
-      while (stars.length > target) stars.pop();
+      var targetStars = Math.min(maxStars, Math.floor((w * h) / density));
+      while (stars.length < targetStars) stars.push(createStar());
+      while (stars.length > targetStars) stars.pop();
+      var targetNeb = Math.floor((w * h) / 80000);
+      while (nebulae.length < targetNeb) nebulae.push(createNebula());
+      while (nebulae.length > targetNeb) nebulae.pop();
     }
     resize();
     window.addEventListener('resize', resize);
 
     function draw() {
       ctx.clearRect(0, 0, w, h);
-      time += 0.008;
+      time += 0.006;
 
-      // Glow halos for bright stars
+      // Draw nebulae (blurred color clouds)
+      for (var i = 0; i < nebulae.length; i++) {
+        var n = nebulae[i];
+        var grad = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, n.r);
+        grad.addColorStop(0, 'rgba(' + n.color.join(',') + ',' + n.alpha + ')');
+        grad.addColorStop(1, 'rgba(' + n.color.join(',') + ',0)');
+        ctx.fillStyle = grad;
+        ctx.fillRect(n.x - n.r, n.y - n.r, n.r * 2, n.r * 2);
+        n.x += n.vx;
+        n.y += n.vy;
+        if (n.x < -n.r) n.x = w + n.r;
+        if (n.x > w + n.r) n.x = -n.r;
+        if (n.y < -n.r) n.y = h + n.r;
+        if (n.y > h + n.r) n.y = -n.r;
+      }
+
+      // Draw bright star halos
       for (var i = 0; i < stars.length; i++) {
         var s = stars[i];
         if (!s.glow) continue;
-        var a = s.baseAlpha + Math.sin(time * s.twinkle + s.phase) * 0.15;
-        a = Math.max(0, Math.min(a, 0.85));
-        var glowR = s.r * 6;
+        var a = s.baseAlpha + Math.sin(time * s.twinkle + s.phase) * 0.12;
+        a = Math.max(0, Math.min(a, 0.8));
+        var glowR = s.r * 5;
         var grad = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, glowR);
         grad.addColorStop(0, 'rgba(' + s.color.join(',') + ',' + a + ')');
-        grad.addColorStop(0.25, 'rgba(' + s.color.join(',') + ',' + (a * 0.3) + ')');
+        grad.addColorStop(0.3, 'rgba(' + s.color.join(',') + ',' + (a * 0.25) + ')');
         grad.addColorStop(1, 'rgba(' + s.color.join(',') + ',0)');
         ctx.fillStyle = grad;
         ctx.fillRect(s.x - glowR, s.y - glowR, glowR * 2, glowR * 2);
       }
 
-      // Draw stars
+      // Draw all stars
       for (var i = 0; i < stars.length; i++) {
         var s = stars[i];
-        var a = s.baseAlpha + Math.sin(time * s.twinkle + s.phase) * 0.06;
-        a = Math.max(0.015, Math.min(a, 0.92));
+        var a = s.baseAlpha + Math.sin(time * s.twinkle + s.phase) * 0.05;
+        a = Math.max(0.01, Math.min(a, 0.9));
 
         ctx.beginPath();
         ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
         ctx.fillStyle = 'rgba(' + s.color.join(',') + ',' + a + ')';
         ctx.fill();
 
-        // Cross flare for brightest stars
-        if (s.glow && a > 0.5) {
-          ctx.strokeStyle = 'rgba(' + s.color.join(',') + ',' + (a * 0.35) + ')';
-          ctx.lineWidth = 0.4;
-          var fl = s.r * 4;
+        if (s.glow && a > 0.45) {
+          ctx.strokeStyle = 'rgba(' + s.color.join(',') + ',' + (a * 0.3) + ')';
+          ctx.lineWidth = 0.35;
+          var fl = s.r * 3.5;
           ctx.beginPath();
           ctx.moveTo(s.x - fl, s.y); ctx.lineTo(s.x + fl, s.y);
           ctx.moveTo(s.x, s.y - fl); ctx.lineTo(s.x, s.y + fl);
           ctx.stroke();
         }
 
-        // Drift
-        s.x += s.vx;
-        s.y += s.vy;
+        // Drift slowly around center (differential rotation)
+        var dx = s.x - centerX;
+        var dy = s.y - centerY;
+        var dist = Math.sqrt(dx * dx + dy * dy) || 1;
+        var angle = Math.atan2(dy, dx);
+        var rs = rotSpeed / (dist * 0.003 + 1);
+        angle += rs;
+        s.x = centerX + Math.cos(angle) * dist + s.vx;
+        s.y = centerY + Math.sin(angle) * dist + s.vy;
         if (s.x < -20) s.x = w + 20;
         if (s.x > w + 20) s.x = -20;
         if (s.y < -20) s.y = h + 20;
@@ -644,136 +730,13 @@ window.__P_ready = new Promise(function(resolve) {
 </script>
 
 <script>
-// Markdown parser (renders .md files to HTML)
-function parseMarkdown(md) {
-  var lines = md.split('\n');
-  var out = [];
-  var inCode = false;
-  var codeBuf = [];
-  var listType = null;
-  var i = 0;
-
-  function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
-
-  function inline(s) {
-    s = esc(s);
-    s = s.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1">');
-    s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
-    s = s.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
-    s = s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-    s = s.replace(/\*(.+?)\*/g, '<em>$1</em>');
-    s = s.replace(/~~(.+?)~~/g, '<del>$1</del>');
-    s = s.replace(/`([^`]+)`/g, '<code>$1</code>');
-    return s;
-  }
-
-  function closeList() {
-    if (listType) { out.push('</' + listType + '>'); listType = null; }
-  }
-
-  while (i < lines.length) {
-    var line = lines[i];
-
-    if (/^```/.test(line)) {
-      closeList();
-      if (inCode) {
-        out.push('<pre><code>' + codeBuf.join('\n') + '</code></pre>');
-        codeBuf = [];
-        inCode = false;
-      } else {
-        inCode = true;
-      }
-      i++;
-      continue;
-    }
-
-    if (inCode) {
-      codeBuf.push(esc(line));
-      i++;
-      continue;
-    }
-
-    var t = line.trim();
-    if (!t) { closeList(); out.push(''); i++; continue; }
-
-    // Skip metadata lines in .md files
-    if (/^tags:/i.test(t)) { i++; continue; }
-
-    var h = t.match(/^(#{1,4})\s+(.+)/);
-    if (h) { closeList(); out.push('<h' + h[1].length + '>' + inline(h[2]) + '</h' + h[1].length + '>'); i++; continue; }
-
-    if (/^---$/.test(t)) { closeList(); out.push('<hr>'); i++; continue; }
-
-    if (/^>\s/.test(t)) { closeList(); out.push('<blockquote>' + inline(t.replace(/^>\s*/, '')) + '</blockquote>'); i++; continue; }
-
-    if (/^[-*]\s/.test(t)) {
-      if (listType !== 'ul') { closeList(); out.push('<ul>'); listType = 'ul'; }
-      out.push('<li>' + inline(t.replace(/^[-*]\s+/, '')) + '</li>');
-      i++; continue;
-    }
-
-    if (/^\d+\.\s/.test(t)) {
-      if (listType !== 'ol') { closeList(); out.push('<ol>'); listType = 'ol'; }
-      out.push('<li>' + inline(t.replace(/^\d+\.\s+/, '')) + '</li>');
-      i++; continue;
-    }
-
-    // Table (protects inline code from | splitting)
-    if (/^\|.+\|$/.test(t)) {
-      closeList();
-      var isHeader = i + 1 < lines.length && /^\|[\s\-:\|]+\|$/.test(lines[i + 1].trim());
-      if (isHeader) {
-        function splitCells(line) {
-          var placeholders = [];
-          var safe = line.replace(/`([^`]+)`/g, function(m, c) {
-            placeholders.push('`' + c + '`');
-            return '\x00' + (placeholders.length - 1) + '\x00';
-          });
-          safe = safe.replace(/\\\|/g, function() {
-            placeholders.push('|');
-            return '\x00' + (placeholders.length - 1) + '\x00';
-          });
-          var cells = safe.split('|').filter(function(c) { return c.trim(); });
-          return cells.map(function(c) {
-            return c.trim().replace(/\x00(\d+)\x00/g, function(_, n) {
-              return placeholders[parseInt(n)];
-            });
-          });
-        }
-        var cols = splitCells(t);
-        out.push('<table><thead><tr>' + cols.map(function(c) { return '<th>' + inline(c) + '</th>'; }).join('') + '</tr></thead><tbody>');
-        i += 2;
-        while (i < lines.length && /^\|.+\|$/.test(lines[i].trim())) {
-          var cells = splitCells(lines[i].trim());
-          out.push('<tr>' + cells.map(function(c) { return '<td>' + inline(c) + '</td>'; }).join('') + '</tr>');
-          i++;
-        }
-        out.push('</tbody></table>');
-        continue;
-      }
-    }
-
-    closeList();
-    out.push('<p>' + inline(t) + '</p>');
-    i++;
-  }
-  closeList();
-  if (inCode) { out.push('<pre><code>' + codeBuf.join('\n') + '</code></pre>'); }
-  return out.join('\n');
-}
-
 // ========== Dynamic article system ==========
 
 var articleMetaCache = {};
-var META_CACHE_VER = 'v2';
+var META_CACHE_VER = 'v3';
 
 function escHtml(s) {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
-
-function extractTitleFromMd(text) {
-  var m = text.match(/^#\s+(.+)/m);
-  return m ? m[1].trim() : null;
 }
 
 function extractTitleFromHtml(text) {
@@ -804,19 +767,6 @@ function extractTagsFromHtml(text) {
   return tags;
 }
 
-function extractTagsFromMd(text) {
-  var tags = [];
-  var lines = text.split('\n');
-  for (var i = 0; i < lines.length && i < 10; i++) {
-    var m = lines[i].match(/^tags:\s*(.+)/i);
-    if (m) {
-      tags = m[1].split(/[,，]/).map(function(t) { return t.trim(); }).filter(Boolean);
-      break;
-    }
-  }
-  return tags;
-}
-
 function formatDate(dateStr) {
   if (!dateStr) return '';
   var d = new Date(dateStr);
@@ -833,10 +783,7 @@ function getItemMeta(file, basePath) {
   if (articleMetaCache[cacheKey]) return Promise.resolve(articleMetaCache[cacheKey]);
 
   var url = basePath + file.name;
-  var isMd = /\.md$/i.test(file.name);
-  var isHtml = /\.html?$/i.test(file.name);
-
-  if (!isMd && !isHtml) return Promise.resolve(null);
+  if (!/\.html?$/i.test(file.name)) return Promise.resolve(null);
 
   return fetch(url, { cache: 'no-store' })
     .then(function(res) {
@@ -845,18 +792,17 @@ function getItemMeta(file, basePath) {
     })
     .then(function(text) {
       if (!text) return null;
-      var title = isMd ? extractTitleFromMd(text) : extractTitleFromHtml(text);
-      if (!title) title = file.name.replace(/\.(md|html?)$/i, '');
-      var tags = isMd ? extractTagsFromMd(text) : extractTagsFromHtml(text);
+      var title = extractTitleFromHtml(text);
+      if (!title) title = file.name.replace(/\.html?$/i, '');
+      var tags = extractTagsFromHtml(text);
       var date = formatDate(file.mtime);
       var meta = {
         name: file.name,
-        url: basePath + file.name.replace(/\.(md|html?)$/i, ''),
+        url: basePath + file.name.replace(/\.html?$/i, ''),
         title: title,
         tags: tags,
         date: date,
-        mtime: file.mtime,
-        isMd: isMd
+        mtime: file.mtime
       };
       articleMetaCache[cacheKey] = meta;
       return meta;
@@ -872,7 +818,7 @@ function fetchArticleList() {
     .then(function(files) {
       // Filter only html/md files, sort by mtime descending
       var articles = files.filter(function(f) {
-        return f.type === 'file' && /\.(md|html?)$/i.test(f.name);
+        return f.type === 'file' && /\.html?$/i.test(f.name);
       });
       articles.sort(function(a, b) {
         return new Date(b.mtime) - new Date(a.mtime);
@@ -983,7 +929,7 @@ function fetchProductList() {
     })
     .then(function(files) {
       var products = files.filter(function(f) {
-        return f.type === 'file' && /\.(md|html?)$/i.test(f.name);
+        return f.type === 'file' && /\.html?$/i.test(f.name);
       });
       products.sort(function(a, b) {
         return new Date(b.mtime) - new Date(a.mtime);
@@ -1087,14 +1033,6 @@ function loadPage(path, container) {
     container.innerHTML = '<div class="page-content"><h1>404</h1><p>页面未找到。</p><a href="/" class="back-link">← 返回首页</a></div>';
   }
 
-  function renderMd(md) {
-    container.innerHTML = '<div class="page-content">' + parseMarkdown(md) + '<a href="/" class="back-link">← 返回首页</a></div>';
-  }
-
-  function isIndexHtml(text) {
-    return /^\s*<!DOCTYPE\s|<html/i.test(text.trim());
-  }
-
   // Articles listing page - dynamic
   if (path === '/articles') {
     var aParams = ((window.__P || {}).pages || {}).articles || {};
@@ -1172,36 +1110,14 @@ function loadPage(path, container) {
     return;
   }
 
-  // Explicit .md file — strip extension and re-route via SPA
-  if (/\.md$/.test(path)) {
-    var cleanPath = path.replace(/\.md$/, '');
-    window.history.replaceState({page:cleanPath}, '', cleanPath);
-    loadPage(cleanPath, container);
-    return;
-  }
-
-  // Try .md first, then .html
-  function tryMd(cb) {
-    fetch(path + '.md', { cache: 'no-store' })
-      .then(function(r) { if (!r.ok) throw Error(); return r.text(); })
-      .then(function(text) {
-        if (isIndexHtml(text)) throw Error();
-        renderMd(text);
-        if (cb) cb();
-      })
-      .catch(function() { if (cb) cb(); });
-  }
-
+  // Load HTML page fragment
   var url = /\.html$/.test(path) ? path : path + '.html';
   fetch(url, { cache: 'no-store' })
     .then(function(res) {
       if (!res.ok) throw Error();
-      return res.text().then(function(html) {
-        if (isIndexHtml(html)) { tryMd(); return; }
-        container.innerHTML = html;
-      });
+      return res.text().then(function(html) { container.innerHTML = html; });
     })
-    .catch(function() { tryMd(show404); });
+    .catch(show404);
 }
 
 // Handle browser back/forward

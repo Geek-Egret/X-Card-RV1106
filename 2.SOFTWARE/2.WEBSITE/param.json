@@ -73,8 +73,16 @@
   "particles": {
     "enabled": true,
     "blur": 1.5,
-    "densityDivisor": 2000,
-    "maxStars": 600
+    "densityDivisor": 2200,
+    "maxStars": 500,
+    "centerX": 0.48,
+    "centerY": 0.52,
+    "rotationSpeed": 8e-05,
+    "arms": 3,
+    "bgLayer1": "rgba(80,20,80,0.35)",
+    "bgLayer2": "rgba(20,20,60,0.3)",
+    "bgLayer3": "rgba(30,10,50,0.25)",
+    "coreColor": "#050510"
   },
   "splash": {
     "enabled": true,

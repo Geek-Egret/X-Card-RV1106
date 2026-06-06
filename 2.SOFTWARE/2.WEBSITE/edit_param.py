@@ -28,7 +28,6 @@ FIELDS = {
     "social.bilibili":       ("Bilibili 地址", str),
     "social.taobao":         ("淘宝店铺地址", str),
     "social.email":          ("联系邮箱", str),
-    "social.rss":            ("RSS 订阅地址", str),
 
     "pages.home.sectionTitle":   ("首页文章区标题", str),
     "pages.home.maxArticles":    ("首页最大文章数", int),
@@ -52,6 +51,14 @@ FIELDS = {
     "particles.blur":        ("星空模糊度 (px)", float),
     "particles.densityDivisor": ("星星密度除数 (越小越密)", int),
     "particles.maxStars":    ("最大星星数量", int),
+    "particles.centerX":     ("银河中心 X 位置 (0~1)", float),
+    "particles.centerY":     ("银河中心 Y 位置 (0~1)", float),
+    "particles.rotationSpeed": ("银河旋转速度", float),
+    "particles.arms":        ("旋臂数量", int),
+    "particles.bgLayer1":    ("背景紫晕颜色 (rgba)", str),
+    "particles.bgLayer2":    ("背景蓝晕颜色 (rgba)", str),
+    "particles.bgLayer3":    ("背景暗紫翼颜色 (rgba)", str),
+    "particles.coreColor":   ("宇宙底色 (#RRGGBB)", str),
 
     "splash.enabled":        ("启用开机动画 (true/false)", bool),
     "splash.duration":       ("动画持续时长 (ms)", int),

@@ -1,0 +1,67 @@
+<div class="page-content">
+<h1>📝 网站正式上线</h1>
+<div class="entry-tags" style="display:none"><span class="tag">公告</span><span class="tag">HTML</span></div>
+
+<h2>关于本站</h2>
+<p>GeekEgret Studio 网站正式上线，运行在 <strong>Rockchip RV1106</strong> 板卡上，由 <strong>Nginx</strong> 提供 Web 服务。所有页面均为纯 HTML 静态页面，不依赖任何前端框架。</p>
+
+<h2>网站功能</h2>
+<ul>
+<li><strong>首页</strong>：展示个人简介、社交链接、最新文章动态</li>
+<li><strong>产品页</strong>：列出所有产品，支持按标签筛选</li>
+<li><strong>文章页</strong>：列出所有文章，支持按标签筛选</li>
+<li><strong>关于页</strong>：介绍工作室与技术栈</li>
+<li><strong>联系页</strong>：提供联系方式</li>
+</ul>
+
+<h2>如何添加文章</h2>
+<ol>
+<li>在 <code>articles/</code> 目录下创建 <code>.html</code> 文件，命名如 <code>my-article.html</code></li>
+<li>文件格式为 HTML 片段，外层用 <code>&lt;div class="page-content"&gt;</code> 包裹</li>
+<li>标题使用 <code>&lt;h1&gt;</code> 标签，标签信息用隐藏的 <code>&lt;div class="entry-tags" style="display:none"&gt;</code> 声明</li>
+<li>通过 <code>scp</code> 上传到板卡 <code>/usr/html/articles/</code> 目录</li>
+<li>首页和文章列表页会自动发现并展示</li>
+</ol>
+
+<h2>HTML 文章格式</h2>
+<table>
+<thead><tr><th>元素</th><th>HTML 标签</th></tr></thead>
+<tbody>
+<tr><td>一级标题</td><td><code>&lt;h1&gt;</code></td></tr>
+<tr><td>二级标题</td><td><code>&lt;h2&gt;</code></td></tr>
+<tr><td>段落</td><td><code>&lt;p&gt;</code></td></tr>
+<tr><td>粗体</td><td><code>&lt;strong&gt;</code></td></tr>
+<tr><td>斜体</td><td><code>&lt;em&gt;</code></td></tr>
+<tr><td>链接</td><td><code>&lt;a href="URL"&gt;</code></td></tr>
+<tr><td>图片</td><td><code>&lt;img src="URL"&gt;</code></td></tr>
+<tr><td>行内代码</td><td><code>&lt;code&gt;</code></td></tr>
+<tr><td>代码块</td><td><code>&lt;pre&gt;&lt;code&gt;</code></td></tr>
+<tr><td>无序列表</td><td><code>&lt;ul&gt;&lt;li&gt;</code></td></tr>
+<tr><td>有序列表</td><td><code>&lt;ol&gt;&lt;li&gt;</code></td></tr>
+<tr><td>引用</td><td><code>&lt;blockquote&gt;</code></td></tr>
+<tr><td>表格</td><td><code>&lt;table&gt;</code></td></tr>
+<tr><td>分割线</td><td><code>&lt;hr&gt;</code></td></tr>
+</tbody></table>
+
+<h2>示例代码</h2>
+<pre><code>&lt;div class="page-content"&gt;
+&lt;h1&gt;我的文章&lt;/h1&gt;
+&lt;div class="entry-tags" style="display:none"&gt;
+  &lt;span class="tag"&gt;教程&lt;/span&gt;
+  &lt;span class="tag"&gt;RV1106&lt;/span&gt;
+&lt;/div&gt;
+
+&lt;p&gt;这是一段正文内容。&lt;/p&gt;
+&lt;h2&gt;小标题&lt;/h2&gt;
+&lt;ul&gt;
+  &lt;li&gt;要点一&lt;/li&gt;
+  &lt;li&gt;要点二&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;a href="/" class="back-link"&gt;← 返回首页&lt;/a&gt;
+&lt;/div&gt;</code></pre>
+
+<h2>参数自定义</h2>
+<p>网站所有文本、链接、样式参数集中在 <code>param.json</code> 文件中，修改后 scp 到板卡即可实时生效。也可使用 <code>python3 edit_param.py</code> 交互式编辑。</p>
+
+<a href="/" class="back-link">← 返回首页</a></div>
